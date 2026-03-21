@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, session
+from flask import Flask, render_template, request
 import pandas as pd
 import sqlite3
 import hashlib
@@ -154,114 +154,28 @@ def index():
 def login():
     error = None
     if request.method == 'POST':
-        # firstname is the email of the user
-        firstname = request.form['FirstName']
-        result = add_name(firstname, request.form['LastName'])
+        email = request.form['email']
+        password = request.form['password']
+        result = add_name(email, password)
 
         # login success
-        if result:
-            user_type = getUserType(firstname)
-            session['user'] = firstname
-            session['type'] = user_type
-            return render_template('checkingInfo.html', error=error, result=result)
+        if (result == 1):
+            render_template('checkingInfo.html', error=error)
         else:
-            return render_template('fail.html', error=error, result=result)
+            render_template('fail.html', error=error)
     return render_template('login.html', error=error)
 
 def add_name(email, password):
-    # hash the password using MD5
+    # hash the password using sha256
     password = hashlib.sha256(password.encode()).hexdigest()
     conn = sqlite3.connect("NittanyAuctionDB")
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM Users WHERE email='" +
-                   email+"' AND password='"+password+"'")
+    cursor.execute("SELECT * FROM Users WHERE email= ? AND password= ?", (email, password))
     result = cursor.fetchall()
     if result:
         return 1
     else:
         return 0
-
-def getInfo(email):
-    ''' return:
-        email ID,
-        name,
-        age,
-        gender,
-        home and billing address (street, city, state, zipcode),
-        last 4 digits of credit cards
-        of a buyer/seller(buyer)'''
-    # connect to database
-    conn = sqlite3.connect("NittanyAuctionDB")
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM Bidders WHERE email='"+email+"'")
-
-    # result=[(email, first_name, last_name, gender, age, home_address, billing_address, last_4_digits_of_credit_cards)]
-    result = []
-
-    # temp is the element in the result
-    # right now temp is in list type, and it will be changed to tuple type later
-    temp = []
-
-    # buyer_result=[(email, first_name, last_name, gender, age, home_address_id, billing_address_id)]
-    buyer_result = cursor.fetchall()
-
-    # adding email, first_name, last_name, age (first 5 elements) to temp
-    for element in buyer_result[0][:5]:
-        temp.append(element)
-
-    result = [tuple(temp)]
-
-    return result
-
-def getUserType(email):
-    '''Returns the user type (buyer, seller(buyer), local_vendor) based on the given email'''
-
-    # at first we assume the user type is buyer
-    user_type = "buyer"
-
-    # connect to the database
-    conn = sqlite3.connect("NittanyAuctionDB")
-    cursor = conn.cursor()
-
-    # determine whether it is a local vendor
-    cursor.execute("SELECT * FROM Local_Vendors WHERE email='"+email+"'")
-    result = cursor.fetchall()
-    if result:
-        user_type = "local_vendor"
-    else:
-        # not a local vendor, but seller(buyer) still possible
-        cursor.execute("SELECT * FROM Sellers WHERE email='"+email+"'")
-        result = cursor.fetchall()
-        if result:
-            user_type = "seller(buyer)"
-        else:
-            cursor.execute("SELECT * FROM Helpdesk WHERE email='"+email+"'")
-            result = cursor.fetchall()
-            if result:
-                user_type = "helpdesk"
-    return user_type
-
-def getSellerInfo(email, user_type):
-    '''Returns the information of a seller(buyer) or a local vender'''
-
-    # connect to the database
-    conn = sqlite3.connect("NittanyAuctionDB")
-    cursor = conn.cursor()
-
-    # seller(buyer) and local vender both have information about routing number, account number, and balance
-    cursor.execute(
-        "SELECT * FROM Sellers WHERE email='"+email+"'")
-    result = cursor.fetchall()
-
-    # if the user is a local vendor, there are some other information (business name, business address, customer service number)
-    if user_type == 'local_vendor':
-        cursor.execute('''  SELECT business_name, business_address_id, customer_service_phone_number
-                            FROM Local_Vendors
-                            WHERE email="'''+email+'"')
-        local_vendor_info = cursor.fetchall()
-        result = [result[0]+local_vendor_info[0]]
-
-    return result
 
 if __name__ == '__main__':
     app.run()
