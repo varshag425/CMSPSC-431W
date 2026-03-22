@@ -1,5 +1,5 @@
 # CMPSC 431W - NittanyAuction Progress Check
----
+
 This is a partial implementation of the NittanyAuction system developed for the progress check. At this stage, we have created a simple Flask-based login prototype for the NittanyAuction system. It loads user data from CSV files into a SQLite database and allows a user to log in as a bidder, seller, or helpdesk staff member.
 
 ## What it does
