@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, redirect, url_for
 import pandas as pd
 import sqlite3
 import hashlib
@@ -12,8 +12,8 @@ def database_setup():
 
 def user_setup():
     columns = ['email', 'password']
-    data = pd.read_csv('C:/Users/mhbth/Downloads/NittanyAuctionDataset_v1/NittanyAuctionDataset_v1/Users.csv',
-                       names=columns)
+    data = pd.read_csv('data/Users.csv',
+                       names=columns, header=0)
     col1 = data['email'].values
     col2 = data['password'].values
 
@@ -37,8 +37,8 @@ def user_setup():
 
 def bidders_setup():
     columns = ['email', 'first_name', 'last_name', 'age', 'home_address_id', 'major']
-    data = pd.read_csv('C:/Users/mhbth/Downloads/NittanyAuctionDataset_v1/NittanyAuctionDataset_v1/Bidders.csv',
-                       names=columns)
+    data = pd.read_csv('data/Bidders.csv',
+                       names=columns, header=0)
     col1 = data['email'].values
     col2 = data['first_name'].values
     col3 = data['last_name'].values
@@ -68,8 +68,8 @@ def bidders_setup():
 
 def sellers_setup():
     columns = ['email', 'bank_routing_number', 'bank_account_number', 'balance']
-    data = pd.read_csv('C:/Users/mhbth/Downloads/NittanyAuctionDataset_v1/NittanyAuctionDataset_v1/Sellers.csv',
-                       names=columns)
+    data = pd.read_csv('data/Sellers.csv',
+                       names=columns, header=0)
     col1 = data['email'].values
     col2 = data['bank_routing_number'].values
     col3 = data['bank_account_number'].values
@@ -95,8 +95,8 @@ def sellers_setup():
 
 def local_vendors_setup():
     columns = ['email', 'business_name', 'business_address_id', 'customer_service_phone_number']
-    data = pd.read_csv('C:/Users/mhbth/Downloads/NittanyAuctionDataset_v1/NittanyAuctionDataset_v1/Local_Vendors.csv',
-                       names=columns)
+    data = pd.read_csv('data/Local_Vendors.csv',
+                       names=columns, header=0)
     col1 = data['email'].values
     col2 = data['business_name'].values
     col3 = data['business_address_id'].values
@@ -122,8 +122,8 @@ def local_vendors_setup():
 
 def helpdesk_setup():
     columns = ['email', 'position']
-    data = pd.read_csv('C:/Users/mhbth/Downloads/NittanyAuctionDataset_v1/NittanyAuctionDataset_v1/Helpdesk.csv',
-                       names=columns)
+    data = pd.read_csv('data/Helpdesk.csv',
+                       names=columns,header=0)
     col1 = data['email'].values
     col2 = data['position'].values
 
@@ -148,24 +148,45 @@ app = Flask(__name__)
 
 @app.route('/')
 def index():
-    return render_template('Main_webpage.html')
+    return render_template('index.html')
 
 @app.route('/login.html', methods=['POST', 'GET'])
 def login():
     error = None
     if request.method == 'POST':
-        email = request.form['email']
-        password = request.form['password']
-        result = add_name(email, password)
+        email = request.form['email'] #gets inputted email
+        password = request.form['password'] #gets inputted password
+        role = request.form['role'] #gets the role button clicked
+        hash_pswrd = hashlib.sha256(password.encode()).hexdigest() #hash password in sha256
+        conn = sqlite3.connect("NittanyAuctionDB")
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM Users WHERE email= ? AND password=?", (email,hash_pswrd)) #sees if user exists in Users table
+        user=cursor.fetchone()
 
-        # login success
-        if (result == 1):
-            render_template('checkingInfo.html', error=error)
-        else:
-            render_template('fail.html', error=error)
+        if user:#if the user exists, check they are in that role
+            if role == "bidder": #BIDDER ROLE CHECK
+                cursor.execute("SELECT * FROM Bidders WHERE email=?", (email,))
+                if cursor.fetchone():
+                    conn.close()
+                    return redirect(url_for('bidder'))
+            elif role == "seller": #SELLER ROLE CHECK
+                cursor.execute("SELECT * FROM Sellers WHERE email=?", (email,))
+                if cursor.fetchone():
+                    conn.close()
+                    return redirect(url_for('seller'))
+            elif role == "helpdesk": #HELPDESK ROLE CHECK
+                cursor.execute("SELECT * FROM Helpdesk WHERE email=?", (email,))
+                if cursor.fetchone():
+                    conn.close()
+                    return redirect(url_for('helpdesk'))
+            else:
+                conn.close()
+                error = "user does not have that role"
+        else:#login attempt failed. No user matches found
+            error = "Invalid username or password"
     return render_template('login.html', error=error)
 
-def add_name(email, password):
+'''def add_name(email, password):
     # hash the password using sha256
     password = hashlib.sha256(password.encode()).hexdigest()
     conn = sqlite3.connect("NittanyAuctionDB")
@@ -175,7 +196,19 @@ def add_name(email, password):
     if result:
         return 1
     else:
-        return 0
+        return 0'''
+
+@app.route('/bidder.html')
+def bidder():
+    return render_template('bidder.html')
+
+@app.route('/seller.html')
+def seller():
+    return render_template('seller.html')
+
+@app.route('/helpdesk.html')
+def helpdesk():
+    return render_template('helpdesk.html')
 
 if __name__ == '__main__':
     app.run()
