@@ -169,16 +169,19 @@ def login():
                 if cursor.fetchone():
                     conn.close()
                     return redirect(url_for('bidder'))
+                else: error = "Invalid username or password for bidder"
             elif role == "seller": #SELLER ROLE CHECK
                 cursor.execute("SELECT * FROM Sellers WHERE email=?", (email,))
                 if cursor.fetchone():
                     conn.close()
                     return redirect(url_for('seller'))
+                else: error = "Invalid username or password for seller"
             elif role == "helpdesk": #HELPDESK ROLE CHECK
                 cursor.execute("SELECT * FROM Helpdesk WHERE email=?", (email,))
                 if cursor.fetchone():
                     conn.close()
                     return redirect(url_for('helpdesk'))
+                else: error = "Invalid username or password for helpdesk"
             else:
                 conn.close()
                 error = "user does not have that role"
