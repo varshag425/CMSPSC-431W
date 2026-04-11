@@ -9,10 +9,19 @@ def database_setup():
     sellers_setup()
     local_vendors_setup()
     helpdesk_setup()
+    auction_listings_setup()
+    bids_setup()
+    address_setup()
+    category_setup()
+    credit_card_setup()
+    rating_setup()
+    request_setup()
+    transaction_setup()
+    zipcode_setup()
 
 def user_setup():
     columns = ['email', 'password']
-    data = pd.read_csv('data/Users.csv',
+    data = pd.read_csv('/data/Users.csv',
                        names=columns, header=0)
     col1 = data['email'].values
     col2 = data['password'].values
@@ -37,7 +46,7 @@ def user_setup():
 
 def bidders_setup():
     columns = ['email', 'first_name', 'last_name', 'age', 'home_address_id', 'major']
-    data = pd.read_csv('data/Bidders.csv',
+    data = pd.read_csv('/data/Bidders.csv',
                        names=columns, header=0)
     col1 = data['email'].values
     col2 = data['first_name'].values
@@ -51,7 +60,7 @@ def bidders_setup():
 
     # create tables
     # Bidders
-    cursor.execute("CREATE TABLE IF NOT EXISTS Bidders(email VARCHAR(50), first_name VARCHAR(25), last_name VARCHAR(25), age INT, home_address_id VARCHAR(40), major VARCHAR(40), PRIMARY KEY(email), FOREIGN KEY (email) REFERENCES Users(email))")
+    cursor.execute("CREATE TABLE IF NOT EXISTS Bidders(email VARCHAR(50), first_name VARCHAR(25), last_name VARCHAR(25), age INT, home_address_id VARCHAR(40), major VARCHAR(40), PRIMARY KEY(email), FOREIGN KEY (email) REFERENCES Users(email), FOREIGN KEY (home_address_id) REFERENCES Address(address_ID))")
 
     for i in range(len(col1)):
         email = col1[i]
@@ -68,7 +77,7 @@ def bidders_setup():
 
 def sellers_setup():
     columns = ['email', 'bank_routing_number', 'bank_account_number', 'balance']
-    data = pd.read_csv('data/Sellers.csv',
+    data = pd.read_csv('/data/Sellers.csv',
                        names=columns, header=0)
     col1 = data['email'].values
     col2 = data['bank_routing_number'].values
@@ -95,7 +104,7 @@ def sellers_setup():
 
 def local_vendors_setup():
     columns = ['email', 'business_name', 'business_address_id', 'customer_service_phone_number']
-    data = pd.read_csv('data/Local_Vendors.csv',
+    data = pd.read_csv('/data/Local_Vendors.csv',
                        names=columns, header=0)
     col1 = data['email'].values
     col2 = data['business_name'].values
@@ -107,7 +116,7 @@ def local_vendors_setup():
 
     # create tables
     # Local_Vendors
-    cursor.execute('CREATE TABLE IF NOT EXISTS Local_Vendors (email VARCHAR(50), business_name VARCHAR(50), business_address_id VARCHAR(40), customer_service_phone_number VARCHAR(20), PRIMARY KEY(email), FOREIGN KEY (email) REFERENCES Sellers(email) ON DELETE CASCADE)')
+    cursor.execute('CREATE TABLE IF NOT EXISTS Local_Vendors (email VARCHAR(50), business_name VARCHAR(50), business_address_id VARCHAR(40), customer_service_phone_number VARCHAR(20), PRIMARY KEY(email), FOREIGN KEY (email) REFERENCES Sellers(email) ON DELETE CASCADE, FOREIGN KEY (business_address_id) REFERENCES Address(address_ID))')
 
     for i in range(len(col1)):
         email = col1[i]
@@ -122,7 +131,7 @@ def local_vendors_setup():
 
 def helpdesk_setup():
     columns = ['email', 'position']
-    data = pd.read_csv('data/Helpdesk.csv',
+    data = pd.read_csv('/data/Helpdesk.csv',
                        names=columns,header=0)
     col1 = data['email'].values
     col2 = data['position'].values
@@ -139,6 +148,244 @@ def helpdesk_setup():
         position = col2[i]
         sql = "INSERT OR IGNORE INTO Helpdesk(email,position) VALUES (?,?)"
         val = (email, position)
+        cursor.execute(sql, val)
+        conn.commit()
+    return cursor.fetchall()
+
+def auction_listings_setup():
+    columns = ['seller_email', 'listing_ID', 'category', 'auction_title', 'product_name', 'product_description', 'quantity', 'reserve_price', 'max_bids', 'status']
+    data = pd.read_csv('/data/Auction_Listings.csv', names=columns, header=0)
+    col1 = data['seller_email'].values
+    col2 = data['listing_ID'].values
+    col3 = data['category'].values
+    col4 = data['auction_title'].values
+    col5 = data['product_name'].values
+    col6 = data['product_description'].values
+    col7 = data['quantity'].values
+    col8 = data['reserve_price'].values
+    col9 = data['max_bids'].values
+    col10 = data['status'].values
+
+    conn = sqlite3.connect("NittanyAuctionDB")
+    cursor = conn.cursor()
+
+    cursor.execute('CREATE TABLE IF NOT EXISTS Auction_Listings(seller_email VARCHAR(50), listing_ID INTEGER UNIQUE, category VARCHAR(200), auction_title VARCHAR(200), product_name VARCHAR(200), product_description VARCHAR(1000), quantity INTEGER, reserve_price VARCHAR(50), max_bids INTEGER, status INTEGER, PRIMARY KEY(seller_email, listing_ID), FOREIGN KEY (seller_email) REFERENCES Sellers(email), FOREIGN KEY (category) REFERENCES Categories(category_name))')
+
+    for i in range(len(col1)):
+        seller_email = col1[i]
+        listing_ID = int(str(col2[i]))
+        category = col3[i]
+        auction_title = col4[i]
+        product_name = col5[i]
+        product_description = col6[i]
+        quantity = int(str(col7[i]))
+        reserve_price = col8[i]
+        max_bids = int(str(col9[i]))
+        status = int(str(col10[i]))
+        sql = "INSERT OR IGNORE INTO Auction_Listings(seller_email, listing_ID, category, auction_title, product_name, product_description, quantity, reserve_price, max_bids, status) VALUES (?,?,?,?,?,?,?,?,?,?)"
+        val = (seller_email, listing_ID, category, auction_title, product_name, product_description, quantity, reserve_price, max_bids, status)
+        cursor.execute(sql, val)
+        conn.commit()
+    return cursor.fetchall()
+
+def bids_setup():
+    columns = ['bid_ID', 'seller_email', 'listing_ID', 'bidder_email', 'bid_price']
+    data = pd.read_csv('/data/Bids.csv', names=columns, header=0)
+    col1 = data['bid_ID'].values
+    col2 = data['seller_email'].values
+    col3 = data['listing_ID'].values
+    col4 = data['bidder_email'].values
+    col5 = data['bid_price'].values
+
+    conn = sqlite3.connect("NittanyAuctionDB")
+    cursor = conn.cursor()
+
+    cursor.execute('CREATE TABLE IF NOT EXISTS Bids(bid_ID INTEGER, seller_email VARCHAR(50), listing_ID INTEGER, bidder_email VARCHAR(50), bid_price REAL, PRIMARY KEY(bid_ID), FOREIGN KEY (seller_email) REFERENCES Sellers(email), FOREIGN KEY (listing_ID) REFERENCES Auction_Listings(listing_ID), FOREIGN KEY (bidder_email) REFERENCES Bidders(email))')
+
+    for i in range(len(col1)):
+        bid_ID = int(str(col1[i]))
+        seller_email = col2[i]
+        listing_ID = int(str(col3[i]))
+        bidder_email = col4[i]
+        bid_price = float(str(col5[i]))
+        sql = "INSERT OR IGNORE INTO Bids(bid_ID, seller_email, listing_ID, bidder_email, bid_price) VALUES (?,?,?,?,?)"
+        val = (bid_ID, seller_email, listing_ID, bidder_email, bid_price)
+        cursor.execute(sql, val)
+        conn.commit()
+    return cursor.fetchall()
+
+def address_setup():
+    columns = ['address_ID', 'zipcode', 'street_number', 'street_name']
+    data = pd.read_csv('/data/Address.csv', names=columns, header=0)
+    col1 = data['address_ID'].values
+    col2 = data['zipcode'].values
+    col3 = data['street_number'].values
+    col4 = data['street_name'].values
+
+    conn = sqlite3.connect("NittanyAuctionDB")
+    cursor = conn.cursor()
+
+    cursor.execute('CREATE TABLE IF NOT EXISTS Address(address_ID VARCHAR(40), zipcode INTEGER, street_number INTEGER, street_name VARCHAR(100), PRIMARY KEY (address_ID), FOREIGN KEY (zipcode) REFERENCES Zipcodes(zipcode))')
+
+    for i in range(len(col1)):
+        address_ID = str(col1[i])
+        zipcode = int(str(col2[i]))
+        street_number = int(str(col3[i]))
+        street_name = col4[i]
+        sql = "INSERT OR IGNORE INTO Address(address_ID, zipcode, street_number, street_name) VALUES (?,?,?,?)"
+        val = (address_ID, zipcode, street_number, street_name)
+        cursor.execute(sql, val)
+        conn.commit()
+    return cursor.fetchall()
+
+def category_setup():
+    columns = ['parent_category', 'category_name']
+    data = pd.read_csv('/data/Categories.csv', names=columns, header=0)
+    col1 = data['parent_category'].values
+    col2 = data['category_name'].values
+
+    conn = sqlite3.connect("NittanyAuctionDB")
+    cursor = conn.cursor()
+
+    cursor.execute('CREATE TABLE IF NOT EXISTS Categories(parent_category VARCHAR(100), category_name VARCHAR(100), PRIMARY KEY (category_name))')
+
+    for i in range(len(col1)):
+        parent_category = str(col1[i])
+        category_name = str(col2[i])
+        sql = "INSERT OR IGNORE INTO Categories(parent_category, category_name) VALUES (?,?)"
+        val = (parent_category, category_name)
+        cursor.execute(sql, val)
+        conn.commit()
+    return cursor.fetchall()
+
+def credit_card_setup():
+    columns = ['credit_card_num', 'card_type', 'expire_month', 'expire_year', 'security_code', 'owner_email']
+    data = pd.read_csv('/data/Credit_Cards.csv', names=columns, header=0)
+    col1 = data['credit_card_num'].values
+    col2 = data['card_type'].values
+    col3 = data['expire_month'].values
+    col4 = data['expire_year'].values
+    col5 = data['security_code'].values
+    col6 = data['owner_email'].values
+
+    conn = sqlite3.connect("NittanyAuctionDB")
+    cursor = conn.cursor()
+
+    cursor.execute('CREATE TABLE IF NOT EXISTS Credit_Cards(credit_card_num VARCHAR(20), card_type VARCHAR(50), expire_month INTEGER, expire_year INTEGER, security_code INTEGER, owner_email VARCHAR(50), PRIMARY KEY (credit_card_num), FOREIGN KEY (owner_email) REFERENCES Users(email))')
+
+    for i in range(len(col1)):
+        credit_card_num = col1[i]
+        card_type = col2[i]
+        expire_month = int(str(col3[i]))
+        expire_year = int(str(col4[i]))
+        security_code = int(str(col5[i]))
+        owner_email = col6[i]
+        sql = "INSERT OR IGNORE INTO Credit_CARDS(credit_card_num, card_type, expire_month, expire_year, security_code, owner_email) VALUES (?,?,?,?,?,?)"
+        val = (credit_card_num, card_type, expire_month, expire_year, security_code, owner_email)
+        cursor.execute(sql, val)
+        conn.commit()
+    return cursor.fetchall()
+
+def rating_setup():
+    columns = ['bidder_email', 'seller_email', 'date', 'rating', 'rating_description']
+    data = pd.read_csv('/data/Ratings.csv', names=columns, header=0)
+    col1 = data['bidder_email'].values
+    col2 = data['seller_email'].values
+    col3 = data['date'].values
+    col4 = data['rating'].values
+    col5 = data['rating_description'].values
+
+    conn = sqlite3.connect("NittanyAuctionDB")
+    cursor = conn.cursor()
+
+    cursor.execute('CREATE TABLE IF NOT EXISTS Ratings(bidder_email VARCHAR(50), seller_email VARCHAR(50), rating_date VARCHAR(50), rating INTEGER, rating_description VARCHAR(500), PRIMARY KEY (bidder_email, seller_email, rating_date), FOREIGN KEY (bidder_email) REFERENCES Bidders(email), FOREIGN KEY (seller_email) REFERENCES Sellers(email))')
+
+    for i in range(len(col1)):
+        bidder_email = col1[i]
+        seller_email = col2[i]
+        rating_date = col3[i]
+        rating = int(str(col4[i]))
+        rating_description = col5[i]
+        sql = "INSERT OR IGNORE INTO Ratings(bidder_email, seller_email, rating_date, rating, rating_description) VALUES (?,?,?,?,?)"
+        val = (bidder_email, seller_email, rating_date, rating, rating_description)
+        cursor.execute(sql, val)
+        conn.commit()
+    return cursor.fetchall()
+
+def request_setup():
+    columns = ['request_ID', 'sender_email', 'helpdesk_staff_email', 'request_type', 'request_description', 'request_status']
+    data = pd.read_csv('/data/Requests.csv', names=columns, header=0)
+    col1 = data['request_ID'].values
+    col2 = data['sender_email'].values
+    col3 = data['helpdesk_staff_email'].values
+    col4 = data['request_type'].values
+    col5 = data['request_description'].values
+    col6 = data['request_status'].values
+
+    conn = sqlite3.connect("NittanyAuctionDB")
+    cursor = conn.cursor()
+
+    cursor.execute('CREATE TABLE IF NOT EXISTS Requests(request_ID INTEGER, sender_email VARCHAR(50), helpdesk_staff_email VARCHAR(50), request_type VARCHAR(50), request_description VARCHAR(200), request_status INTEGER, PRIMARY KEY (request_ID), FOREIGN KEY (sender_email) REFERENCES Users(email), FOREIGN KEY (helpdesk_staff_email) REFERENCES Helpdesk(email))')
+
+    for i in range(len(col1)):
+        request_ID = int(str(col1[i]))
+        sender_email = col2[i]
+        helpdesk_staff_email = col3[i]
+        request_type = col4[i]
+        request_description = col5[i]
+        request_status = int(str(col6[i]))
+        sql = "INSERT OR IGNORE INTO Requests(request_ID, sender_email, helpdesk_staff_email, request_type, request_description, request_status) VALUES (?,?,?,?,?,?)"
+        val = (request_ID, sender_email, helpdesk_staff_email, request_type, request_description, request_status)
+        cursor.execute(sql, val)
+        conn.commit()
+    return cursor.fetchall()
+
+def transaction_setup():
+    columns = ['transaction_ID', 'seller_email', 'listing_ID', 'bidder_email', 'date', 'payment']
+    data = pd.read_csv('/data/Transactions.csv', names=columns, header=0)
+    col1 = data['transaction_ID'].values
+    col2 = data['seller_email'].values
+    col3 = data['listing_ID'].values
+    col4 = data['bidder_email'].values
+    col5 = data['date'].values
+    col6 = data['payment'].values
+
+    conn = sqlite3.connect("NittanyAuctionDB")
+    cursor = conn.cursor()
+
+    cursor.execute('CREATE TABLE IF NOT EXISTS Transactions(transaction_ID INTEGER, seller_email VARCHAR(50), listing_ID INTEGER, bidder_email VARCHAR(50), transaction_date VARCHAR(50), payment REAL, PRIMARY KEY (transaction_ID), FOREIGN KEY (seller_email) REFERENCES Sellers(email), FOREIGN KEY (listing_ID) REFERENCES Auction_Listings(listing_ID), FOREIGN KEY (bidder_email) REFERENCES Bidders(email))')
+
+    for i in range(len(col1)):
+        transaction_ID = int(str(col1[i]))
+        seller_email = col2[i]
+        listing_ID = int(str(col3[i]))
+        bidder_email = col4[i]
+        transaction_date = col5[i]
+        payment = float(str(col6[i]))
+        sql = "INSERT OR IGNORE INTO Transactions(transaction_ID, seller_email, listing_ID, bidder_email, transaction_date, payment) VALUES (?,?,?,?,?,?)"
+        val = (transaction_ID, seller_email, listing_ID, bidder_email, transaction_date, payment)
+        cursor.execute(sql, val)
+        conn.commit()
+    return cursor.fetchall()
+
+def zipcode_setup():
+    columns = ['zipcode', 'city', 'state']
+    data = pd.read_csv('/data/Zipcode_Info.csv', names=columns, header=0)
+    col1 = data['zipcode'].values
+    col2 = data['city'].values
+    col3 = data['state'].values
+
+    conn = sqlite3.connect("NittanyAuctionDB")
+    cursor = conn.cursor()
+
+    cursor.execute('CREATE TABLE IF NOT EXISTS Zipcodes(zipcode INTEGER, city VARCHAR(50), zipcode_state VARCHAR(50), PRIMARY KEY(zipcode))')
+
+    for i in range(len(col1)):
+        zipcode = int(str(col1[i]))
+        city = col2[i]
+        zipcode_state = col3[i]
+        sql = "INSERT OR IGNORE INTO Zipcodes(zipcode, city, zipcode_state) VALUES (?,?,?)"
+        val = (zipcode, city, zipcode_state)
         cursor.execute(sql, val)
         conn.commit()
     return cursor.fetchall()
