@@ -448,6 +448,35 @@ def login():
     else:
         return 0'''
 
+@app.route('/registration.html', methods=['POST', 'GET'])
+def user_registration():
+    error = None
+    if request.method == "POST":
+        user_role = request.form['role']
+        user_email = request.form['email']
+        password = request.form['password']
+        hashed_password = hashlib.sha256(password.encode()).hexdigest()
+        conn = sqlite3.connect("NittanyAuctionDB")
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM Users WHERE email= ?",
+                       (user_email,))  # sees if user exists in Users table
+        user = cursor.fetchone()
+
+        if user:
+            error = "User email already exists! try a different email."
+        else:
+            cursor.execute("INSERT INTO Users(email, password) VALUES (?,?)", (user_email, hashed_password,))
+            if user_role == "buyer":
+                cursor.execute("INSERT INTO Bidders(email, first_name, last_name, age, home_address_id, major) VALUES (?, NULL, NULL, NULL, NULL, NULL)", (user_email,))
+            elif user_role == "seller":
+                cursor.execute("INSERT INTO Sellers(email, bank_routing_number, bank_account_number, balance) VALUES (?, NULL, NULL, NULL)", (user_email,))
+            elif user_role == "helpdesk":
+                cursor.execute("INSERT INTO Helpdesk(email, position) VALUES (?, NULL)", (user_email,))
+            else:
+                error = "User role not recognized! Select one of the user roles displayed"
+            conn.commit()
+            return redirect(url_for('login'))
+    return render_template('/registration.html', error=error)
 @app.route('/bidder.html')
 def bidder():
     return render_template('bidder.html')
