@@ -14,6 +14,11 @@
     <button type="submit" name="role" value="bidder">Bidder Login</button>
     <button type="submit" name="role" value="seller">Seller Login</button>
     <button type="submit" name="role" value="helpdesk">HelpDesk Login</button>
+    <br>
+</form>
+
+<form action="/change_password.html" method="GET">
+    <button type="submit" name="change password" value="change password"> Change Password</button>
 </form>
 {% if error %}<p style="color:red;">{{ error }}</p>{% endif %}
 </body>

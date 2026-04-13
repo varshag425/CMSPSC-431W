@@ -477,6 +477,34 @@ def user_registration():
             conn.commit()
             return redirect(url_for('login'))
     return render_template('/registration.html', error=error)
+
+@app.route('/change_password.html', methods=['POST', 'GET'])
+def change_password():
+    error = None
+    if request.method == "POST":
+        user_email = request.form['email']
+        new_password = request.form['new_password']
+        confirm_new_password = request.form['confirm_new_password']
+        conn = sqlite3.connect("NittanyAuctionDB")
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM Users WHERE email = ?", (user_email,))
+        user = cursor.fetchone()
+        if user:
+            old_password = user[1]
+            if old_password == hashlib.sha256(new_password.encode()).hexdigest():
+                error = "New password equals old password, enter a different password"
+            else:
+                if new_password != confirm_new_password:
+                    error = "New Password and Confirm New Password do not match! Check both fields again."
+                else:
+                    hashed_password = hashlib.sha256(new_password.encode()).hexdigest()
+                    cursor.execute("UPDATE Users Set password = ? WHERE email LIKE ?", (hashed_password,user_email,))
+                    conn.commit()
+                    return redirect(url_for('login'))
+        else:
+            error = "User with that email address does not exist! type in a valid email address or register a new account."
+
+    return render_template('/change_password.html', error=error)
 @app.route('/bidder.html')
 def bidder():
     return render_template('bidder.html')
