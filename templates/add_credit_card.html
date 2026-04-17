@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+</head>
+<body>
+<h1> Add a New Credit Card </h1>
+<br>
+<h3> Credit Card Number (Format is ****-****-****-**** or ****-******-*****). Must include hyphens:</h3>
+<form method="POST">
+    <input type="text" name="new_credit_card_number" required>
+    <h3> Credit Card Type:</h3>
+    <input type="text" name="new_credit_card_type" required>
+    <h3> Expire Month:</h3>
+    <input type="number" name="new_expire_month" required>
+    <h3> Expire Year</h3>
+    <input type="number" name="new_expire_year" required>
+    <h3> Security Code: </h3>
+    <input type="number" name="new_security_code" required>
+    <br>
+    <button type="submit" name="submit_new_credit_card" value="submit_new_credit_card"> Submit</button>
+</form>
+<form action="/view_credit_cards.html" method="GET">
+    <button type="submit" name="go_back" value="go_back"> Go Back</button>
+</form>
+{% if error %}<p style="color:red;">{{ error }}</p>{% endif %}
+</body>
+</html>

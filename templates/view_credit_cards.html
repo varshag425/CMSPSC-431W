@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+</head>
+<body>
+<h1> Credit Card Settings</h1>
+<br>
+<h2> Number of Credit Cards: {{ number_credit_cards }}</h2>
+<br>
+<form action="/add_credit_card.html" method="GET">
+    <button type="submit" name="add_credit_card" value="add_credit_card"> Add Credit Card</button>
+</form>
+<br>
+<form action="/remove_credit_card.html" method="GET">
+    <button type="submit" name="remove_credit_card" value="remove_credit_card"> Remove Credit Card</button>
+</form>
+<form action="/bidder_settings.html" method="GET">
+    <button type="submit" name="go_back" value="go_back"> Go Back</button>
+</form>
+</body>
+</html>

@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+</head>
+<body>
+<h1> Enter New City and State For New Zipcode </h1>
+<br>
+<p> New City Name </p>
+<form method = "POST">
+    <input type="text" name="new_city" required>
+    <br>
+    <p> New State </p>
+    <input type="text" name="new_state" required>
+    <button type="submit" name="submit_city_state" value="submit_city_state"> Submit</button>
+</form>
+<form action="/change_zipcode_number.html" method="GET">
+    <button type="submit" name="go_back" value="go_back"> Go Back</button>
+</form>
+{% if error %}<p style="color:red;">{{ error }}</p>{% endif %}
+</body>
+</html>

@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<h2> New Age</h2>
+<form method="POST">
+    <input type="number" name="new_age" required>
+    <br>
+    <button type="submit" name="submit_new_age" value="submit_new_age"> Submit </button>
+</form>
+
+<form action="/bidder_settings.html" method="GET">
+    <button type="submit" name="go_back" value="go_back"> Go Back</button>
+</form>
+{% if error %}<p style="color:red;">{{ error }}</p>{% endif %}
+</body>
+</html>

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+</head>
+<body>
+<h1> Seller Settings </h1>
+<p style="display: inline;"> User email: {{ email }} </p>
+<form method = "GET">
+    <button type="submit" name="change_email" value="change_email"> Request User Email Change</button>
+</form>
+<br>
+<p style="display: inline;"> Bank Routing Number: {{ bank_routing_number }} </p>
+<form action="/change_bank_routing_number.html" method = "GET">
+    <button type="submit" name="change_bank_routing_number" value="change_bank_routing_number"> Change Bank Routing Number </button>
+</form>
+<br>
+<p style="display: inline;"> Bank Account Number: {{ bank_account_number }} </p>
+<form action = "/change_bank_account_number.html" method = "GET">
+    <button type="submit" name="change_bank_account_number" value="change_bank_account_number"> Change Bank Account Number </button>
+</form>
+<br>
+<p style="display: inline;"> Balance: {{ balance }} </p>
+<br>
+<br>
+<br>
+<form action="/change_password.html" method = "GET">
+    <button type="submit" name="change password" value="change password"> Change Password</button>
+</form>
+<br>
+{% if role == 'local_vendor' %}
+<form action="/local_vendor_settings.html" method="GET">
+    <button type="submit" name="change_local_vendor_settings" value="change_local_vendor_settings" > Local Vendor Settings </button>
+</form>
+{% endif %}
+<br>
+{% if role == 'seller' %}
+<form method="GET">
+    <button type="submit" name="request_buyer_role" value="request_buyer_role"> Request Bidder Role</button>
+</form>
+{% endif %}
+<br>
+<form action="/seller.html" method="GET">
+    <button type="submit" name="go_back" value="go_back"> Go Back</button>
+</form>
+</body>
+</html>

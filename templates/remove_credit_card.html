@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+</head>
+<body>
+<h1> Delete A Credit Card! </h1>
+<br>
+<h3> Enter in a valid credit card number to delete the credit card (format is ****-****-****-**** or ****-******-*****). Must include hyphens</h3>
+<form method="POST">
+    <input type="text" name="delete_credit_card" required>
+    <button type="submit" name="remove_credit_card" value="remove_credit_card"> Submit</button>
+</form>
+<form action="/view_credit_cards.html" method="GET">
+    <button type="submit" name="go_back" value="go_back"> Go Back</button>
+</form>
+{% if error %}<p style="color:red;">{{ error }}</p>{% endif %}
+</body>
+</html>

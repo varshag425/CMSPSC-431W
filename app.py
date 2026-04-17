@@ -1,7 +1,9 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, session
+from flask_session import Session
 import pandas as pd
 import sqlite3
 import hashlib
+import re
 
 def database_setup():
     user_setup()
@@ -271,7 +273,7 @@ def credit_card_setup():
     conn = sqlite3.connect("NittanyAuctionDB")
     cursor = conn.cursor()
 
-    cursor.execute('CREATE TABLE IF NOT EXISTS Credit_Cards(credit_card_num VARCHAR(20), card_type VARCHAR(50), expire_month INTEGER, expire_year INTEGER, security_code INTEGER, owner_email VARCHAR(50), PRIMARY KEY (credit_card_num), FOREIGN KEY (owner_email) REFERENCES Users(email))')
+    cursor.execute('CREATE TABLE IF NOT EXISTS Credit_Cards(credit_card_num VARCHAR(20), card_type VARCHAR(50), expire_month INTEGER, expire_year INTEGER, security_code INTEGER, owner_email VARCHAR(50), PRIMARY KEY (credit_card_num), FOREIGN KEY (owner_email) REFERENCES Bidders(email))')
 
     for i in range(len(col1)):
         credit_card_num = col1[i]
@@ -392,14 +394,19 @@ def zipcode_setup():
 
 database_setup()
 app = Flask(__name__)
+app.config["SESSION_PERMANENT"] = False     # Sessions expire when browser closes
+app.config["SESSION_TYPE"] = "filesystem"     # Store session data on the filesystem
+Session(app)
 
 @app.route('/')
 def index():
+    session['webpage'] = 'index'
     return render_template('index.html')
 
 @app.route('/login.html', methods=['POST', 'GET'])
 def login():
     error = None
+    session['webpage'] = 'login'
     if request.method == 'POST':
         email = request.form['email'] #gets inputted email
         password = request.form['password'] #gets inputted password
@@ -415,13 +422,16 @@ def login():
                 cursor.execute("SELECT * FROM Bidders WHERE email=?", (email,))
                 if cursor.fetchone():
                     conn.close()
-                    return redirect(url_for('bidder'))
+                    session['email'] = email
+                    session['password'] = password
+                    return redirect(url_for('bidder', email=email))
                 else: error = "Invalid username or password for bidder"
             elif role == "seller": #SELLER ROLE CHECK
                 cursor.execute("SELECT * FROM Sellers WHERE email=?", (email,))
                 if cursor.fetchone():
                     conn.close()
-                    return redirect(url_for('seller'))
+                    session['email'] = email
+                    return redirect(url_for('seller', email=email))
                 else: error = "Invalid username or password for seller"
             elif role == "helpdesk": #HELPDESK ROLE CHECK
                 cursor.execute("SELECT * FROM Helpdesk WHERE email=?", (email,))
@@ -451,6 +461,7 @@ def login():
 @app.route('/registration.html', methods=['POST', 'GET'])
 def user_registration():
     error = None
+    session['webpage'] = 'registration'
     if request.method == "POST":
         user_role = request.form['role']
         user_email = request.form['email']
@@ -465,22 +476,55 @@ def user_registration():
         if user:
             error = "User email already exists! try a different email."
         else:
-            cursor.execute("INSERT INTO Users(email, password) VALUES (?,?)", (user_email, hashed_password,))
             if user_role == "buyer":
-                cursor.execute("INSERT INTO Bidders(email, first_name, last_name, age, home_address_id, major) VALUES (?, NULL, NULL, NULL, NULL, NULL)", (user_email,))
+                cursor.execute("INSERT OR IGNORE INTO Users(email, password) VALUES (?,?)", (user_email, hashed_password,))
+                home_address_id = hashlib.md5(user_email.encode()).hexdigest()
+                cursor.execute("INSERT OR IGNORE INTO Bidders(email, first_name, last_name, age, home_address_id, major) VALUES (?, NULL, NULL, NULL, ?, NULL)", (user_email,home_address_id,))
+                cursor.execute("INSERT OR IGNORE INTO Address(address_ID, zipcode, street_number, street_name) VALUES (?,0, NULL, NULL)", (home_address_id,))
+                cursor.execute("INSERT OR IGNORE INTO Zipcodes(zipcode, city, zipcode_state) VALUES (0, NULL, NULL)")
             elif user_role == "seller":
-                cursor.execute("INSERT INTO Sellers(email, bank_routing_number, bank_account_number, balance) VALUES (?, NULL, NULL, NULL)", (user_email,))
+                session['email'] = user_email
+                session['password'] = hashed_password
+                return redirect(url_for('seller_or_vendor', error=error))
             elif user_role == "helpdesk":
-                cursor.execute("INSERT INTO Helpdesk(email, position) VALUES (?, NULL)", (user_email,))
+                cursor.execute("INSERT OR IGNORE INTO Users(email, password) VALUES (?,?)", (user_email, hashed_password,))
+                cursor.execute("INSERT OR IGNORE INTO Helpdesk(email, position) VALUES (?, NULL)", (user_email,))
             else:
                 error = "User role not recognized! Select one of the user roles displayed"
             conn.commit()
             return redirect(url_for('login'))
+
     return render_template('/registration.html', error=error)
 
+@app.route('/seller_or_vendor.html', methods=['POST', 'GET'])
+def seller_or_vendor():
+    error=None
+    if request.method == "POST":
+        seller_role = request.form['seller_role']
+        user_email = session.get('email')
+        user_password = session.get('password')
+        conn = sqlite3.connect("NittanyAuctionDB")
+        cursor = conn.cursor()
+        if seller_role == "seller":
+            cursor.execute("INSERT INTO Users(email, password) VALUES (?,?)", (user_email, user_password,))
+            cursor.execute("INSERT INTO Sellers(email, bank_routing_number, bank_account_number, balance) VALUES (?, NULL, NULL, 0)", (user_email,))
+            conn.commit()
+            return redirect(url_for('login'))
+        else:
+            business_address_id = hashlib.md5(user_email.encode()).hexdigest()
+            cursor.execute("INSERT INTO Users(email, password) VALUES (?,?)", (user_email, user_password,))
+            cursor.execute("INSERT INTO Sellers(email, bank_routing_number, bank_account_number, balance) VALUES (?, NULL, NULL, 0)",(user_email,))
+            cursor.execute("INSERT INTO Local_Vendors(email, business_name, business_address_id, customer_service_phone_number) VALUES (?,NULL,?,NULL)", (user_email,business_address_id,))
+            cursor.execute("INSERT INTO Address(address_ID, zipcode, street_number, street_name) VALUES (?,0,NULL,NULL)", (business_address_id,))
+            cursor.execute("INSERT OR IGNORE INTO Zipcodes(zipcode, city, zipcode_state) VALUES (0, NULL, NULL)")
+            conn.commit()
+            return redirect(url_for('login'))
+
+    return render_template('seller_or_vendor.html', error=error)
 @app.route('/change_password.html', methods=['POST', 'GET'])
 def change_password():
     error = None
+    previous_webpage = session.get('webpage')
     if request.method == "POST":
         user_email = request.form['email']
         new_password = request.form['new_password']
@@ -500,22 +544,590 @@ def change_password():
                     hashed_password = hashlib.sha256(new_password.encode()).hexdigest()
                     cursor.execute("UPDATE Users Set password = ? WHERE email LIKE ?", (hashed_password,user_email,))
                     conn.commit()
-                    return redirect(url_for('login'))
+                    if previous_webpage == 'bidder_settings':
+                        return redirect(url_for('bidder_settings'))
+                    elif previous_webpage == 'seller_settings':
+                        return redirect(url_for('seller_settings'))
+                    else:
+                        return redirect(url_for('login'))
         else:
             error = "User with that email address does not exist! type in a valid email address or register a new account."
 
-    return render_template('/change_password.html', error=error)
+    return render_template('/change_password.html', error=error, previous_webpage=previous_webpage)
 @app.route('/bidder.html')
 def bidder():
-    return render_template('bidder.html')
+    email = session.get('email')
+    session['role'] = 'bidder'
+    conn = sqlite3.connect("NittanyAuctionDB")
+    cursor = conn.cursor()
+    cursor.execute("SELECT B.home_address_id FROM Bidders B, Users U WHERE U.email = ? AND U.email = B.email", (email,))
+    home_address = str(cursor.fetchone()[0])
+    session['webpage'] = 'bidder'
+    session['address_id'] = home_address
+    return render_template('bidder.html', email=email)
+
+@app.route('/bidder_settings.html')
+def bidder_settings():
+    session['webpage'] = 'bidder_settings'
+    email = session.get('email')
+    password = session.get('password')
+    conn = sqlite3.connect("NittanyAuctionDB")
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM Bidders WHERE email = ?", (email,))
+    user = cursor.fetchone()
+    firstname = user[1]
+    lastname = user[2]
+    age = user[3]
+    major = user[5]
+    return render_template('bidder_settings.html', email=email, firstname=firstname, lastname=lastname, age=age, major=major)
 
 @app.route('/seller.html')
 def seller():
-    return render_template('seller.html')
+    session['webpage'] = 'seller'
+    user_email = session.get('email')
+    conn = sqlite3.connect("NittanyAuctionDB")
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM Sellers WHERE email = ?", (user_email,))
+    seller = cursor.fetchone()[0]
+    cursor.execute("SELECT * FROM Local_Vendors WHERE email = ?", (user_email,))
+    local_vendor = cursor.fetchone()
+    if local_vendor == None:
+        session['role'] = 'seller'
+    elif local_vendor[0] == seller:
+        session['role'] = 'local_vendor'
+        cursor.execute("SELECT L.business_address_id FROM Local_Vendors L, Users U WHERE U.email = ? AND U.email = L.email",(user_email,))
+        business_address = str(cursor.fetchone()[0])
+        session['address_id'] = business_address
 
+    return render_template('seller.html', email=user_email)
+
+@app.route('/seller_settings.html', methods=["GET", "POST"])
+def seller_settings():
+    email = session.get('email')
+    user_role = session.get('role')
+    session['webpage'] = 'seller_settings'
+    conn = sqlite3.connect("NittanyAuctionDB")
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM Sellers WHERE email = ?", (email,))
+    seller_info = cursor.fetchone()
+    bank_routing_number = str(seller_info[1])
+    bank_account_number = str(seller_info[2])
+    balance = float(str(seller_info[3]))
+    return render_template('seller_settings.html', email=email, bank_routing_number=bank_routing_number, bank_account_number=bank_account_number, balance=balance, role=user_role)
+
+@app.route('/change_bank_routing_number.html', methods=['POST', 'GET'])
+def change_bank_routing_number():
+    error=None
+    if request.method == "POST":
+        new_bank_routing_number = str(request.form['new_bank_routing_number'])
+        user_email = session.get('email')
+        conn = sqlite3.connect("NittanyAuctionDB")
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM Sellers WHERE email = ?", (user_email,))
+        current_bank_routing_number = cursor.fetchone()[1]
+        bank_routing_number_format = r'[0-9]{4}-[0-9]{4}-[0-9]'
+        match = re.search(bank_routing_number_format, new_bank_routing_number)
+        if match == None:
+            error = "New Bank Routing Number is in the incorrect format: Enter a valid bank routing number using the format above!"
+        elif match and len(new_bank_routing_number) > 11:
+            error = "New Bank Routing Number is in the incorrect format: Enter a valid bank routing number using the format above!"
+        elif new_bank_routing_number == current_bank_routing_number:
+            error = "New Bank Routing Number is the same as the current Bank Routing Number! Enter a different Bank Routing Number!"
+        elif new_bank_routing_number == "":
+            error = "New Bank Routing Number field is empty! Enter a valid Bank Routing Number using the format above!"
+        else:
+            cursor.execute("UPDATE Sellers SET bank_routing_number = ? WHERE email = ?", (new_bank_routing_number, user_email))
+            conn.commit()
+            return redirect(url_for('seller_settings'))
+
+    return render_template('change_bank_routing_number.html', error=error)
+
+@app.route("/change_bank_account_number.html", methods=['POST', 'GET'])
+def change_bank_account_number():
+    error=None
+    if request.method == "POST":
+        new_bank_account_number = str(request.form['change_bank_account_number'])
+        user_email = session.get('email')
+        conn = sqlite3.connect("NittanyAuctionDB")
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM Sellers WHERE email = ?", (user_email,))
+        current_bank_account_number = cursor.fetchone()[2]
+        bank_account_number_format = r'[0-9]{8}'
+        match = re.search(bank_account_number_format, new_bank_account_number)
+        if match == None:
+            error = "Inputted Bank Account Number is in the incorrect format! Enter a valid Bank Account Number using the format above!"
+        elif match and len(new_bank_account_number) > 8:
+            error = "Inputted Bank Account Number is in the incorrect format! Enter a valid Bank Account Number using the format above!"
+        elif new_bank_account_number == current_bank_account_number:
+            error = "New Bank Account Number is the same as the Current Bank Account Number! Enter a different Bank Account Number!"
+        elif new_bank_account_number == "":
+            error = "New Bank Account Number field is empty! Enter a valid Bank Account Number using the format above!"
+        else:
+            cursor.execute("UPDATE Sellers SET bank_account_number = ? WHERE email = ?", (new_bank_account_number, user_email))
+            conn.commit()
+            return redirect(url_for('seller_settings'))
+
+    return render_template('change_bank_account_number.html', error=error)
+@app.route('/local_vendor_settings.html')
+def local_vendor_settings():
+    email = session.get('email')
+    conn = sqlite3.connect("NittanyAuctionDB")
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM Local_Vendors WHERE email = ?", (email,))
+    local_vendor_info = cursor.fetchone()
+    business_name = local_vendor_info[1]
+    customer_service_phone_number = local_vendor_info[3]
+    return render_template('local_vendor_settings.html', business_name=business_name, customer_service_phone_number=customer_service_phone_number)
+
+@app.route('/change_business_name.html', methods=['POST', 'GET'])
+def change_business_name():
+    error=None
+    if request.method == "POST":
+        email = session.get('email')
+        new_business_name = str(request.form['new_business_name'])
+        conn = sqlite3.connect("NittanyAuctionDB")
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM Local_Vendors WHERE email = ?", (email,))
+        current_business_name = cursor.fetchone()
+        if current_business_name == None:
+            current_business_name = ""
+        else:
+            current_business_name = str(current_business_name[1])
+
+        if new_business_name == "":
+            error = "New Business Name field is empty! Type in a new Business Name!"
+        elif new_business_name == current_business_name:
+            error = "New Business Name is the same as the Current Business Name! Type in a different Business Name!"
+        else:
+            cursor.execute("UPDATE Local_Vendors SET business_name = ? WHERE email = ?", (new_business_name, email,))
+            conn.commit()
+            return redirect(url_for('local_vendor_settings'))
+
+    return render_template("change_business_name.html", error=error)
+
+@app.route('/change_customer_service_phone_number.html', methods=['POST', 'GET'])
+def change_customer_service_phone_number():
+    error=None
+    if request.method == "POST":
+        email = session.get('email')
+        new_service_phone_number = str(request.form['new_customer_service_phone_number'])
+        conn = sqlite3.connect("NittanyAuctionDB")
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM Local_Vendors")
+        current_service_phone_number = cursor.fetchall()
+        phone_number_format = r'[0-9]{3}-[0-9]{3}-[0-9]{4}'
+        match = re.search(phone_number_format, new_service_phone_number)
+        if match == None:
+            error = "Inputted Phone Number is in an invalid format! Type in a phone number based on the format above!"
+        elif match and len(new_service_phone_number) > 12:
+            error = "Inputted Phone Number is in an invalid format! Type in a phone number based on the format above!"
+        elif new_service_phone_number == "":
+            error = "Phone Number field is empty! Type in a phone number based on the format above!"
+        elif new_service_phone_number == current_service_phone_number:
+            error = "New Phone Number is the same as the Current Phone Number! Type in a different phone number!"
+            print(error)
+        else:
+            for iterator in range(len(current_service_phone_number)):
+                if new_service_phone_number == str(current_service_phone_number[iterator][3]) and str(current_service_phone_number[iterator][0]) != email:
+                    error = "Inputted Phone Number already exists with another vendor! Type in a different Phone Number based on the format above!"
+                elif new_service_phone_number == str(current_service_phone_number[iterator][3]) and str(current_service_phone_number[iterator][0]) == email:
+                    error = "New Phone Number is the same as the Current Phone Number! Type in a different phone number!"
+                else:
+                    pass
+
+            if error == "Inputted Phone Number already exists with another vendor! Type in a different Phone Number based on the format above!":
+                error = "Inputted Phone Number already exists with another vendor! Type in a different Phone Number based on the format above!"
+            elif error == "New Phone Number is the same as the Current Phone Number! Type in a different phone number!":
+                error = "New Phone Number is the same as the Current Phone Number! Type in a different phone number!"
+            else:
+                cursor.execute("UPDATE Local_Vendors SET customer_service_phone_number = ? WHERE email = ?", (new_service_phone_number, email,))
+                conn.commit()
+                return redirect(url_for('local_vendor_settings'))
+
+    return render_template("change_customer_service_phone_number.html", error=error)
 @app.route('/helpdesk.html')
 def helpdesk():
+    session['webpage'] = 'helpdesk'
     return render_template('helpdesk.html')
+
+@app.route('/change_firstname.html', methods=['POST', 'GET'])
+def change_firstname():
+    error = None
+    session['webpage'] = 'change_firstname'
+    if request.method == "POST":
+        new_firstname = str(request.form['new_firstname'])
+        user_email = session.get('email')
+        conn = sqlite3.connect("NittanyAuctionDB")
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM Bidders WHERE email = ?", (user_email,))
+        current_firstname = cursor.fetchone()[1]
+        if current_firstname == None:
+            current_firstname = ""
+        else:
+            current_firstname = str(current_firstname)
+
+        if new_firstname == "":
+            error = "First Name field cannot be empty! enter a new first name again!"
+        elif new_firstname == current_firstname:
+            error = "New First Name is the Same as the Old First Name! Type in a different first name!"
+        else:
+            cursor.execute("UPDATE Bidders SET first_name = ? WHERE email LIKE ?", (new_firstname,user_email,))
+            conn.commit()
+            return redirect(url_for('bidder_settings'))
+
+    return render_template('change_firstname.html', error=error)
+
+@app.route('/change_lastname.html', methods=['POST', 'GET'])
+def change_lastname():
+    error = None
+    session['webpage'] = 'change_lastname'
+    if request.method == "POST":
+        new_lastname = str(request.form['new_lastname'])
+        user_email = session.get('email')
+        conn = sqlite3.connect("NittanyAuctionDB")
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM Bidders WHERE email = ?", (user_email,))
+        current_lastname = cursor.fetchone()[2]
+        if current_lastname == None:
+            current_lastname = ""
+        else:
+            current_lastname = str(current_lastname)
+        if new_lastname == "":
+            error = "Last Name field cannot be empty! enter a new last name again!"
+        elif new_lastname == current_lastname:
+            error = "New Last Name is the same as the Old Last Name! Type in a different last name!"
+        else:
+            cursor.execute("UPDATE Bidders SET last_name = ? WHERE email LIKE ?", (new_lastname, user_email,))
+            conn.commit()
+            return redirect(url_for('bidder_settings'))
+    return render_template('change_lastname.html', error=error)
+
+@app.route('/change_age.html', methods=['POST', 'GET'])
+def change_age():
+    error = None
+    session['webpage'] = 'change_age'
+    if request.method == "POST":
+        new_age = int(str(request.form['new_age']))
+        user_email = session.get('email')
+        conn = sqlite3.connect("NittanyAuctionDB")
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM Bidders WHERE email = ?", (user_email,))
+        current_age = cursor.fetchone()[3]
+        if current_age == None:
+            current_age = 0
+        else:
+            current_age = int(str(current_age))
+
+        if new_age == None:
+            error = "Age field cannot be empty! Select an age using the number selector!"
+        elif new_age == current_age:
+            error = "New Age is the same as the Old Age! Select or Type in a different Age!"
+        elif new_age <= 0:
+            error = "Age must be a positive number! Select or type in a positive age!"
+        else:
+            cursor.execute("UPDATE Bidders SET age = ? WHERE email Like ?", (new_age, user_email,))
+            conn.commit()
+            return redirect(url_for('bidder_settings'))
+    return render_template('change_age.html', error=error)
+
+@app.route("/change_major.html", methods=['POST', 'GET'])
+def change_major():
+    error = None
+    session['webpage'] = 'change_major'
+    if request.method == "POST":
+        new_major = str(request.form['new_major'])
+        user_email = session.get('email')
+        conn = sqlite3.connect("NittanyAuctionDB")
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM Bidders WHERE email = ?", (user_email,))
+        current_major = cursor.fetchone()[5]
+        if current_major == None:
+            current_major = ""
+        else:
+            current_major = str(current_major)
+
+        if new_major == "":
+            error = "Major field cannot be empty! Type in a major again!"
+        elif new_major == current_major:
+            error = "New Major is the same as the Old Major! Type in a different major again!"
+        else:
+            cursor.execute("UPDATE Bidders SET major = ? WHERE email LIKE ?", (new_major, user_email,))
+            conn.commit()
+            return redirect(url_for('bidder_settings'))
+
+    return render_template('change_major.html', error=error)
+
+@app.route("/change_address.html")
+def change_address_settings():
+    email = session.get('email')
+    session['webpage'] = 'change_address'
+    role = session.get('role')
+    conn = sqlite3.connect("NittanyAuctionDB")
+    cursor = conn.cursor()
+    if role == 'bidder':
+        cursor.execute("SELECT A.address_ID, A.zipcode, A.street_number, A.street_name FROM Bidders B, Address A WHERE B.email = ? AND B.home_address_id = A.address_ID", (email,))
+        previous_webpage = "/bidder_settings.html"
+    else:
+        cursor.execute("SELECT A.address_ID, A.zipcode, A.street_number, A.street_name FROM Local_Vendors L, Address A WHERE L.email = ? AND L.business_address_id = A.address_ID", (email,))
+        previous_webpage = "/local_vendor_settings.html"
+    address = cursor.fetchone()
+    zipcode = address[1]
+    street_number = address[2]
+    street_name = address[3]
+    return render_template('change_address.html', zipcode=zipcode, street_number=street_number, street_name=street_name, previous_webpage=previous_webpage)
+
+@app.route("/change_zipcode_settings.html", methods=['POST', 'GET'])
+def change_zipcode():
+    email = session.get('email')
+    session['webpage'] = 'change_zipcode_settings'
+    role = session.get('role')
+    conn = sqlite3.connect("NittanyAuctionDB")
+    cursor = conn.cursor()
+    if role == 'bidder':
+        cursor.execute("SELECT Z.zipcode, Z.city, Z.zipcode_state FROM Zipcodes Z, Address A, Bidders B WHERE B.email = ? AND B.home_address_id = A.address_ID AND A.zipcode = Z.zipcode", (email,))
+    else:
+        cursor.execute(
+            "SELECT Z.zipcode, Z.city, Z.zipcode_state FROM Zipcodes Z, Address A, Local_Vendors L WHERE L.email = ? AND L.business_address_id = A.address_ID AND A.zipcode = Z.zipcode",(email,))
+    zipcode = cursor.fetchone()
+    zipcode_number = int(str(zipcode[0]))
+    city = zipcode[1]
+    zipcode_state = zipcode[2]
+
+    return render_template('change_zipcode_settings.html', zipcode_number=zipcode_number, city=city, zipcode_state=zipcode_state)
+
+@app.route("/change_zipcode_number.html", methods=['POST', 'GET'])
+def change_zipcode_number():
+    error=""
+    session['webpage'] = 'change_zipcode_number'
+    if request.method == "POST":
+        new_zipcode_number = int(str(request.form['new_zipcode_number']))
+        print(new_zipcode_number)
+        user_email = session.get('email')
+        user_address_id = session.get('address_id')
+        role = session.get('role')
+        conn = sqlite3.connect("NittanyAuctionDB")
+        cursor = conn.cursor()
+        if role == 'bidder':
+            cursor.execute("SELECT Z.zipcode, Z.city, Z.zipcode_state FROM Zipcodes Z, Address A, Bidders B WHERE B.email = ? AND B.home_address_id = A.address_ID AND A.zipcode = Z.zipcode",(user_email,))
+        else:
+            cursor.execute("SELECT Z.zipcode, Z.city, Z.zipcode_state FROM Zipcodes Z, Address A, Local_Vendors L WHERE L.email = ? AND L.business_address_id = A.address_ID AND A.zipcode = Z.zipcode",(user_email,))
+        current_zipcode_number = int(str(cursor.fetchone()[0]))
+        if new_zipcode_number == 0:
+            error = "Zipcode cannot be 0. Select or type in a positive Zipcode!"
+        elif new_zipcode_number == None:
+            error = "Zipcode field cannot be empty! enter a new zipcode again!"
+        elif new_zipcode_number < 0:
+            error = "Zipcode cannot be negative. Select or type in a positive Zipcode!"
+        else:
+            cursor.execute("SELECT * FROM Zipcodes WHERE zipcode = ?", (new_zipcode_number,))
+            current_zipcode_number = cursor.fetchall()
+            print(current_zipcode_number)
+            if len(current_zipcode_number) == 1:
+                cursor.execute("UPDATE Address SET zipcode = ? WHERE address_ID = ?",
+                               (new_zipcode_number, user_address_id,))
+                conn.commit()
+                city = str(current_zipcode_number[0][1])
+                zipcode_state = str(current_zipcode_number[0][2])
+                return render_template('change_zipcode_settings.html', zipcode_number=new_zipcode_number, city=city, zipcode_state=zipcode_state)
+            else:
+                session['zipcode'] = str(new_zipcode_number)
+                return redirect(url_for('change_city_state', error=error))
+    return render_template('change_zipcode_number.html', error=error)
+
+@app.route("/change_city_state.html", methods=['POST', 'GET'])
+def change_city_state():
+    error=None
+    if request.method == "POST":
+        zipcode_number = int(session.get('zipcode'))
+        user_address_id = session.get('address_id')
+        new_city_name = str(request.form['new_city'])
+        new_state_name = str(request.form['new_state'])
+        conn = sqlite3.connect("NittanyAuctionDB")
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM Zipcodes WHERE city = ? AND zipcode_state = ?", (new_city_name, new_state_name,))
+        city_state_name_check = cursor.fetchall()
+        if(len(city_state_name_check) >= 1):
+            error = "Zipcode with the inputted city name and state already exists! input a new city name or a new state name!"
+        else:
+            cursor.execute("UPDATE Address SET zipcode = ? WHERE address_ID = ?",
+                           (zipcode_number, user_address_id,))
+            cursor.execute("INSERT OR IGNORE INTO Zipcodes(zipcode, city, zipcode_state) VALUES (?,?,?)", (zipcode_number, new_city_name, new_state_name,))
+            conn.commit()
+            return render_template('change_zipcode_settings.html', zipcode_number=zipcode_number, city=new_city_name, zipcode_state=new_state_name)
+
+    return render_template('change_city_state.html', error=error)
+
+@app.route("/change_street_number.html", methods=['POST', 'GET'])
+def change_street_number():
+    error=None
+    if request.method == "POST":
+        new_street_number = int(str(request.form['new_street_number']))
+        user_email = session.get('email')
+        user_address_id = session.get('address_id')
+        role = session.get('role')
+        conn = sqlite3.connect("NittanyAuctionDB")
+        cursor = conn.cursor()
+        if role == 'bidder':
+            cursor.execute("SELECT A.address_ID, A.zipcode, A.street_number, A.street_name FROM Address A, Bidders B WHERE B.email = ? AND B.home_address_id = A.address_ID", (user_email,))
+        else:
+            cursor.execute("SELECT A.address_ID, A.zipcode, A.street_number, A.street_name FROM Address A, Local_Vendors L WHERE L.email = ? AND L.business_address_id = A.address_ID",(user_email,))
+        current_address = cursor.fetchone()
+        current_street_number = current_address[2]
+        if current_street_number == None:
+            current_street_number = 0
+        else:
+            current_street_number = int(str(current_street_number))
+
+        if new_street_number == 0:
+            error = "Street Number cannot be 0! Select or Type in a positive Street Number!"
+        elif new_street_number < 0:
+            error = "Street Number cannot be negative! Select or Type in a positive Street Number!"
+        elif new_street_number == current_street_number:
+            error = "New Street Number is the same as the Current Street Number! Select or Type in a different Street Number!"
+        else:
+            cursor.execute("UPDATE Address SET street_number = ? WHERE address_ID = ?", (new_street_number, user_address_id,))
+            conn.commit()
+            zipcode = int(current_address[1])
+            street_name = current_address[3]
+            return render_template('change_address.html', zipcode=zipcode, street_number=new_street_number, street_name=street_name)
+
+    return render_template('change_street_number.html', error=error)
+
+@app.route("/change_street_name.html", methods=['POST', 'GET'])
+def change_street_name():
+    error=None
+    if request.method == "POST":
+        new_street_name = request.form['new_street_name']
+        user_email = session.get('email')
+        user_address_id = session.get('address_id')
+        role = session.get('role')
+        conn = sqlite3.connect("NittanyAuctionDB")
+        cursor = conn.cursor()
+        if role == 'bidder':
+            cursor.execute("SELECT A.address_ID, A.zipcode, A.street_number, A.street_name FROM Address A, Bidders B WHERE B.email = ? AND B.home_address_id = A.address_ID",(user_email,))
+        else:
+            cursor.execute("SELECT A.address_ID, A.zipcode, A.street_number, A.street_name FROM Address A, Local_Vendors L WHERE L.email = ? AND L.business_address_id = A.address_ID",(user_email,))
+        current_address = cursor.fetchone()
+        current_street_name = current_address[3]
+        if current_street_name == None:
+            current_street_name = ""
+        else:
+            current_street_name = str(current_street_name)
+
+        if new_street_name == "":
+            error = "Street Name field cannot be empty! Enter a Street Name!"
+        elif new_street_name == current_street_name:
+            error = "New Street Name is the same as the Current Street Name! Type in a different Street Name!"
+        else:
+            cursor.execute("UPDATE Address SET street_name = ? WHERE address_ID = ?", (new_street_name, user_address_id,))
+            conn.commit()
+            zipcode = int(str(current_address[1]))
+            street_number = current_address[2]
+            return render_template('change_address.html', zipcode=zipcode, street_number=street_number, street_name=new_street_name)
+
+    return render_template('change_street_name.html', error=error)
+
+@app.route('/view_credit_cards.html')
+def view_credit_cards():
+    user_email = session.get('email')
+    conn = sqlite3.connect("NittanyAuctionDB")
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM Credit_Cards C WHERE C.owner_email = ? ", (user_email,))
+    number_credit_cards = len(cursor.fetchall())
+    return render_template('view_credit_cards.html', number_credit_cards=number_credit_cards)
+
+@app.route('/add_credit_card.html', methods=['POST', 'GET'])
+def add_credit_card():
+    error=None
+    if request.method == "POST":
+        new_credit_card_number = request.form['new_credit_card_number']
+        new_credit_card_type = request.form['new_credit_card_type']
+        new_expire_month = int(str(request.form['new_expire_month']))
+        new_expire_year = int(str(request.form['new_expire_year']))
+        new_security_code = int(str(request.form['new_security_code']))
+        user_email = session.get('email')
+        conn = sqlite3.connect("NittanyAuctionDB")
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM Credit_Cards")
+        duplicate_credit_cards = cursor.fetchall()
+        credit_card_number_format_1 = r'(?:[0-9]{4}-){3}[0-9]{4}'
+        credit_card_number_format_2 = r'[0-9]{4}-[0-9]{6}-[0-9]{5}'
+        credit_card_number_match_1 = re.search(credit_card_number_format_1, new_credit_card_number)
+        credit_card_number_match_2 = re.search(credit_card_number_format_2, new_credit_card_number)
+        if credit_card_number_match_1 == None and credit_card_number_match_2 == None:
+            error = "Credit Card Number is in the incorrect format! Enter in the credit card number using the format above!"
+        elif credit_card_number_match_1 and len(new_credit_card_number) > 19:
+            error = "Credit Card Number is in the incorrect format! Enter in the credit card number using the format above!"
+        elif credit_card_number_match_2 and len(new_credit_card_number) > 17:
+            error = "Credit Card Number is in the incorrect format! Enter in the credit card number using the format above!"
+        elif (new_credit_card_number == ""):
+            error = "Credit Card Number field is empty! Type in a valid credit card number using the format above!"
+        else:
+            for iterator in range (len(duplicate_credit_cards)):
+                if(new_credit_card_number == str(duplicate_credit_cards[iterator][0])):
+                    error = "Credit Card with that number already exists! Type in a different credit card number using the format above!"
+
+            if error == "Credit Card with that number already exists! Type in a different credit card number using the format above!":
+                error = "Credit Card with that number already exists! Type in a different credit card number using the format above!"
+
+            elif new_credit_card_type == "":
+                error = "Credit Card Type field is empty! Type in a valid credit card type!"
+
+            elif new_expire_month < 1 or new_expire_month > 12:
+                error = "Expire Month field is not a number between 1 and 12 inclusive! Select or Type In an valid expire month!"
+
+            elif new_expire_year < 1950:
+                error = "Expire Year field is not a valid year! Select or Type in a valid expire year!"
+
+            elif new_security_code < 0 or new_security_code > 999:
+                error = "Security Code field is not valid! Select or Type In a security code between 0 and 999!"
+            else:
+                cursor.execute("INSERT OR IGNORE INTO Credit_Cards(credit_card_num, card_type, expire_month, expire_year, security_code, owner_email) VALUES (?,?,?,?,?,?)", (new_credit_card_number,new_credit_card_type,new_expire_month,new_expire_year,new_security_code,user_email,))
+                conn.commit()
+                cursor.execute("SELECT * FROM Credit_Cards C WHERE C.owner_email = ?", (user_email,))
+                number_credit_cards = len(cursor.fetchall())
+                return render_template('view_credit_cards.html', number_credit_cards=number_credit_cards)
+
+    return render_template('add_credit_card.html', error=error)
+
+@app.route('/remove_credit_card.html', methods=['POST', 'GET'])
+def remove_credit_card():
+    error = None
+    if request.method == 'POST':
+        credit_card_number = request.form['delete_credit_card']
+        user_email = session.get('email')
+        conn = sqlite3.connect("NittanyAuctionDB")
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM Credit_Cards")
+        duplicate_credit_cards = cursor.fetchall()
+        credit_card_number_format_1 = r'(?:[0-9]{4}-){3}[0-9]{4}'
+        credit_card_number_format_2 = r'[0-9]{4}-[0-9]{6}-[0-9]{5}'
+        credit_card_number_match_1 = re.search(credit_card_number_format_1, credit_card_number)
+        credit_card_number_match_2 = re.search(credit_card_number_format_2, credit_card_number)
+        if credit_card_number_match_1 == None and credit_card_number_match_2 == None:
+            error = "Credit Card Number is in the incorrect format! Enter in the credit card number using the format above!"
+        elif credit_card_number_match_1 and len(credit_card_number) > 19:
+            error = "Credit Card Number is in the incorrect format! Enter in the credit card number using the format above!"
+        elif credit_card_number_match_2 and len(credit_card_number) > 17:
+            error = "Credit Card Number is in the incorrect format! Enter in the credit card number using the format above!"
+        elif (credit_card_number == ""):
+            error = "Credit Card Number field is empty! Type in a valid credit card number using the format above!"
+        else:
+            for iterator in range(len(duplicate_credit_cards)):
+                if (credit_card_number == str(duplicate_credit_cards[iterator][0]) and user_email != str(duplicate_credit_cards[iterator][5])):
+                    error = "Credit Card with that number is owned by a different account! Type in a credit card number you own!"
+
+            if error == "Credit Card with that number is owned by a different account! Type in a credit card number you own!":
+                error = "Credit Card with that number is owned by a different account! Type in a credit card number you own!"
+
+            else:
+                cursor.execute("DELETE FROM Credit_Cards WHERE owner_email = ? AND credit_card_num = ?", (user_email, credit_card_number))
+                conn.commit()
+                cursor.execute("SELECT * FROM Credit_Cards C WHERE C.owner_email = ?", (user_email,))
+                number_credit_cards = len(cursor.fetchall())
+                return render_template('view_credit_cards.html', number_credit_cards=number_credit_cards)
+
+    return render_template('remove_credit_card.html', error=error)
 
 if __name__ == '__main__':
     app.run()

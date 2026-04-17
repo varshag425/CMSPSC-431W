@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+</head>
+<body>
+<h1> Change Bank Account Number </h1>
+<br>
+<h3> Format should be (********)</h3>
+<br>
+<form method="POST">
+    <input type="text" name="change_bank_account_number" required>
+    <button type="submit" name="new_bank_account_number" value="new_bank_account_number"> Submit</button>
+</form>
+<br>
+<form action="/seller_settings.html" method="GET">
+    <button type="submit" name="go_back" value="go_back"> Go Back</button>
+</form>
+{% if error %}<p style="color:red;">{{ error }}</p>{% endif %}
+</body>
+</html>

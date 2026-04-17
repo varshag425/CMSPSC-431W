@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+</head>
+<body>
+<h1> Zipcode Settings </h1>
+<br>
+<p style="display: inline;"> Zipcode: {{ zipcode_number }} </p>
+<form action="/change_zipcode_number.html" method="GET">
+    <button type="submit" name="change_zipcode_number" value="change_zipcode_number"> Change Zipcode Number</button>
+</form>
+<br>
+<p style="display: inline;"> City: {{ city }} </p>
+<br>
+<p style="display: inline;"> State: {{ zipcode_state }} </p>
+<br>
+<form action="/change_address.html" method="GET">
+    <button type="submit" name="go_back" value="go_back"> Go Back</button>
+</form>
+</body>
+</html>

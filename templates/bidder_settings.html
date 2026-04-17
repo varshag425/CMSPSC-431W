@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+</head>
+<body>
+<h1> Bidder settings </h1>
+<p style="display: inline;"> User email: {{ email }} </p>
+<form method = "GET">
+    <button type="submit" name="change_email" value="change_email"> Request User Email Change</button>
+</form>
+<br>
+<p style="display: inline;"> First Name: {{ firstname }}</p>
+<form action="/change_firstname.html" method = "GET">
+    <button type="submit" name="change_firstname" value="change_firstname"> Change First Name</button>
+</form>
+<br>
+<p style="display: inline;"> Last Name: {{ lastname }}</p>
+<form action="/change_lastname.html" method = "GET">
+    <button type="submit" name="change_lastname" value="change_lastname"> Change Last Name</button>
+</form>
+<br>
+<p style="display: inline;"> Age: {{ age }}</p>
+<form action="/change_age.html" method = "GET">
+    <button type="submit" name="change_age" value="change_age"> Change Age</button>
+</form>
+<br>
+<p style="display: inline;"> major: {{ major }}</p>
+<form action="/change_major.html" method = "GET">
+    <button type="submit" name="change_major" value="change_major"> Change Major</button>
+</form>
+<br>
+<form action="/change_password.html" method = "GET">
+    <button type="submit" name="change password" value="change password"> Change Password</button>
+</form>
+
+<form action="/view_credit_cards.html" method="GET">
+    <button type="submit" name="change_credit_cards" value="change_credit_cards"> Change Credit Cards</button>
+</form>
+
+<form action="/change_address.html" method="GET">
+    <button type="submit" name="change_address" value="change_address"> Change Address</button>
+</form>
+<br>
+<form method="GET">
+    <button type="submit" name="request_seller_role" value="request_seller_role"> Request Seller Role</button>
+</form>
+<br>
+<form action="/bidder.html" method="GET">
+    <button type="submit" name="go_back" value="go_back"> Go Back</button>
+</form>
+</body>
+</html>

@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+</head>
+<body>
+<h2> New Zipcode Number </h2>
+<br>
+<form method="POST">
+    <input type="number" name="new_zipcode_number" required>
+    <br>
+    <button type="submit" name="submit_zipcode_number" value="submit_zipcode_number"> Submit</button>
+</form>
+<form action="/change_zipcode_settings.html" method="GET">
+    <button type="submit" name="go_back" value="go_back"> Go Back</button>
+</form>
+{% if error %}<p style="color:red;">{{ error }}</p>{% endif %}
+</body>
+</html>

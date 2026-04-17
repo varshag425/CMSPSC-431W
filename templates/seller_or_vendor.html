@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+</head>
+<body>
+<h1> Select which type of seller to register this account with</h1>
+<br>
+<form method="POST">
+    <input type="radio" name="seller_role" value="seller" checked> Seller
+    <input type="radio" name="seller_role" value="local_vendor"> Local Vendor
+    <button type="submit"> Register </button>
+</form>
+<br>
+<form action="/registration.html" method="GET">
+    <button type="submit" name="go_back" value="go_back"> Go Back</button>
+</form>
+<br>
+{% if error %}<p style="color:red;">{{ error }}</p>{% endif %}
+</body>
+</html>

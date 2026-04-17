@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+</head>
+<body>
+<h1> Address settings </h1>
+<br>
+<p style="display: inline;"> Zipcode: {{ zipcode }} </p>
+<form action="/change_zipcode_settings.html" method="GET">
+    <button type="submit" name="change_zipcode" value="change_zipcode"> Change Zipcode </button>
+</form>
+<br>
+<p style="display: inline;"> Street Number: {{ street_number }} </p>
+<form action="/change_street_number.html" method="GET">
+    <button type="submit" name="change_street_number" value="change_street_number"> Change Street Number </button>
+</form>
+<br>
+<p style="display: inline;"> Street Name: {{ street_name }} </p>
+<form action="/change_street_name.html" method="GET">
+    <button type="submit" name="change_street_name" value="change_street_name"> Change Street Name</button>
+</form>
+<br>
+<form action="{{ previous_webpage }}" method="GET">
+    <button type="submit" name="go_back" value="go_back"> Go Back</button>
+</form>
+</body>
+</html>

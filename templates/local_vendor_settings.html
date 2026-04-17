@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+</head>
+<body>
+<h1> Local Vendor Settings:</h1>
+<br>
+<p style="display: inline;"> Business Name: {{ business_name }}</p>
+<form action="/change_business_name.html" method="GET">
+    <button type="submit" name="change_business_name" value="change_business_name"> Change Business Name</button>
+</form>
+<br>
+<p style="display: inline;"> Customer Service Phone Number: {{ customer_service_phone_number }}</p>
+<form action="/change_customer_service_phone_number.html" method="GET">
+    <button type="submit" name="change_customer_service_phone_number" value="change_customer_service_phone_number"> Change Customer Service Phone Number</button>
+</form>
+<br>
+<br>
+<form action="/change_address.html" method="GET">
+    <button type="submit" name="change_address_settings" value="change_address_settings"> Change Address </button>
+</form>
+<br>
+<form action="/seller_settings.html" method="GET">
+    <button type="submit" name="go_back" value="go_back"> Go Back</button>
+</form>
+</body>
+</html>
