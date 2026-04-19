@@ -23,7 +23,7 @@ def database_setup():
 
 def user_setup():
     columns = ['email', 'password']
-    data = pd.read_csv('/data/Users.csv',
+    data = pd.read_csv('data/Users.csv',
                        names=columns, header=0)
     col1 = data['email'].values
     col2 = data['password'].values
@@ -48,7 +48,7 @@ def user_setup():
 
 def bidders_setup():
     columns = ['email', 'first_name', 'last_name', 'age', 'home_address_id', 'major']
-    data = pd.read_csv('/data/Bidders.csv',
+    data = pd.read_csv('data/Bidders.csv',
                        names=columns, header=0)
     col1 = data['email'].values
     col2 = data['first_name'].values
@@ -79,7 +79,7 @@ def bidders_setup():
 
 def sellers_setup():
     columns = ['email', 'bank_routing_number', 'bank_account_number', 'balance']
-    data = pd.read_csv('/data/Sellers.csv',
+    data = pd.read_csv('data/Sellers.csv',
                        names=columns, header=0)
     col1 = data['email'].values
     col2 = data['bank_routing_number'].values
@@ -106,7 +106,7 @@ def sellers_setup():
 
 def local_vendors_setup():
     columns = ['email', 'business_name', 'business_address_id', 'customer_service_phone_number']
-    data = pd.read_csv('/data/Local_Vendors.csv',
+    data = pd.read_csv('data/Local_Vendors.csv',
                        names=columns, header=0)
     col1 = data['email'].values
     col2 = data['business_name'].values
@@ -133,7 +133,7 @@ def local_vendors_setup():
 
 def helpdesk_setup():
     columns = ['email', 'position']
-    data = pd.read_csv('/data/Helpdesk.csv',
+    data = pd.read_csv('data/Helpdesk.csv',
                        names=columns,header=0)
     col1 = data['email'].values
     col2 = data['position'].values
@@ -156,7 +156,7 @@ def helpdesk_setup():
 
 def auction_listings_setup():
     columns = ['seller_email', 'listing_ID', 'category', 'auction_title', 'product_name', 'product_description', 'quantity', 'reserve_price', 'max_bids', 'status']
-    data = pd.read_csv('/data/Auction_Listings.csv', names=columns, header=0)
+    data = pd.read_csv('data/Auction_Listings.csv', names=columns, header=0)
     col1 = data['seller_email'].values
     col2 = data['listing_ID'].values
     col3 = data['category'].values
@@ -192,7 +192,7 @@ def auction_listings_setup():
 
 def bids_setup():
     columns = ['bid_ID', 'seller_email', 'listing_ID', 'bidder_email', 'bid_price']
-    data = pd.read_csv('/data/Bids.csv', names=columns, header=0)
+    data = pd.read_csv('data/Bids.csv', names=columns, header=0)
     col1 = data['bid_ID'].values
     col2 = data['seller_email'].values
     col3 = data['listing_ID'].values
@@ -218,7 +218,7 @@ def bids_setup():
 
 def address_setup():
     columns = ['address_ID', 'zipcode', 'street_number', 'street_name']
-    data = pd.read_csv('/data/Address.csv', names=columns, header=0)
+    data = pd.read_csv('data/Address.csv', names=columns, header=0)
     col1 = data['address_ID'].values
     col2 = data['zipcode'].values
     col3 = data['street_number'].values
@@ -242,7 +242,7 @@ def address_setup():
 
 def category_setup():
     columns = ['parent_category', 'category_name']
-    data = pd.read_csv('/data/Categories.csv', names=columns, header=0)
+    data = pd.read_csv('data/Categories.csv', names=columns, header=0)
     col1 = data['parent_category'].values
     col2 = data['category_name'].values
 
@@ -262,7 +262,7 @@ def category_setup():
 
 def credit_card_setup():
     columns = ['credit_card_num', 'card_type', 'expire_month', 'expire_year', 'security_code', 'owner_email']
-    data = pd.read_csv('/data/Credit_Cards.csv', names=columns, header=0)
+    data = pd.read_csv('data/Credit_Cards.csv', names=columns, header=0)
     col1 = data['credit_card_num'].values
     col2 = data['card_type'].values
     col3 = data['expire_month'].values
@@ -290,7 +290,7 @@ def credit_card_setup():
 
 def rating_setup():
     columns = ['bidder_email', 'seller_email', 'date', 'rating', 'rating_description']
-    data = pd.read_csv('/data/Ratings.csv', names=columns, header=0)
+    data = pd.read_csv('data/Ratings.csv', names=columns, header=0)
     col1 = data['bidder_email'].values
     col2 = data['seller_email'].values
     col3 = data['date'].values
@@ -316,7 +316,7 @@ def rating_setup():
 
 def request_setup():
     columns = ['request_ID', 'sender_email', 'helpdesk_staff_email', 'request_type', 'request_description', 'request_status']
-    data = pd.read_csv('/data/Requests.csv', names=columns, header=0)
+    data = pd.read_csv('data/Requests.csv', names=columns, header=0)
     col1 = data['request_ID'].values
     col2 = data['sender_email'].values
     col3 = data['helpdesk_staff_email'].values
@@ -344,7 +344,7 @@ def request_setup():
 
 def transaction_setup():
     columns = ['transaction_ID', 'seller_email', 'listing_ID', 'bidder_email', 'date', 'payment']
-    data = pd.read_csv('/data/Transactions.csv', names=columns, header=0)
+    data = pd.read_csv('data/Transactions.csv', names=columns, header=0)
     col1 = data['transaction_ID'].values
     col2 = data['seller_email'].values
     col3 = data['listing_ID'].values
@@ -372,7 +372,7 @@ def transaction_setup():
 
 def zipcode_setup():
     columns = ['zipcode', 'city', 'state']
-    data = pd.read_csv('/data/Zipcode_Info.csv', names=columns, header=0)
+    data = pd.read_csv('data/Zipcode_Info.csv', names=columns, header=0)
     col1 = data['zipcode'].values
     col2 = data['city'].values
     col3 = data['state'].values
@@ -1128,6 +1128,41 @@ def remove_credit_card():
                 return render_template('view_credit_cards.html', number_credit_cards=number_credit_cards)
 
     return render_template('remove_credit_card.html', error=error)
+
+@app.route("/product_listings.html", methods=['POST', 'GET'])
+def product_listings():
+    category_selected= request.args.get("category_name","All")#All is root categroy
+    conn = sqlite3.connect("NittanyAuctionDB")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT category_name, parent_category FROM Categories")#get the categories and parents
+    rows = cursor.fetchall()
+
+    categories =[]#array of tuples of categories with their name, parents and children
+    for row in rows:#each row in the rows of categories from databse
+        category = {"category_name":row["category_name"],"parent_category":row["parent_category"],"children":[]}
+        categories.append(category)
+    categoriesD = {}#categories dictionary
+    for category in categories:#adding each category to the dictionary so easier to access parent name and children
+        categoriesD[category["category_name"]] = category
+
+    category_hierarchy = []#the actual hierarchy of categories so subcategories appear underneath their parent
+    for category in categories:
+        parent_name = category["parent_category"]#get the parent name of current category
+        if parent_name == "Root":#to find 1st level of children under root cat
+            category_hierarchy.append(category)
+        else:#all other subcategories not directly under root
+            parent = categoriesD.get(parent_name)#get the parent name from cat dictionary
+            if parent: parent["children"].append(category)
+
+    if category_selected=="All":#root cat selected
+        cursor.execute("SELECT product_name, category FROM Auction_Listings WHERE status=1")#status=1 is active auctions
+    else:#more specific cat selected
+        cursor.execute("SELECT product_name, category FROM Auction_Listings WHERE category = ? AND status=1", (category_selected,))#status=1 for active auctions
+    products= cursor.fetchall()
+    conn.close()
+
+    return render_template("product_listings.html", categories=category_hierarchy, products=products, category_selected=category_selected)#sends the cat hierarchy, products in category selected and the category selected
 
 if __name__ == '__main__':
     app.run()
