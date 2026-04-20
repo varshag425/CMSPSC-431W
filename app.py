@@ -2,10 +2,17 @@ from flask import Flask, render_template, request, redirect, url_for, session
 from flask_session import Session
 import pandas as pd
 import sqlite3
-import hashlib
-import re
+import hashlib # To hash passwords
+import re # to check to see if text input matches a particular format
 
 def database_setup():
+    ''' This function calls other functions
+        to setup the NittanyAuction database
+        one csv file at a time. This involves reading the csv files,
+        calling a CREATE TABLE SQL statement to create the table,
+        then using a for loop to call an INSERT SQL statement to
+        insert each row into the table
+    '''
     user_setup()
     bidders_setup()
     sellers_setup()
@@ -22,6 +29,10 @@ def database_setup():
     zipcode_setup()
 
 def user_setup():
+    ''' This function sets up the Users
+        table based on the csv file
+        called Users.csv
+    '''
     columns = ['email', 'password']
     data = pd.read_csv('data/Users.csv',
                        names=columns, header=0)
@@ -47,6 +58,10 @@ def user_setup():
     return cursor.fetchall()
 
 def bidders_setup():
+    ''' This function sets up the Bidders
+        table based on the csv file
+        called Bidders.csv
+    '''
     columns = ['email', 'first_name', 'last_name', 'age', 'home_address_id', 'major']
     data = pd.read_csv('data/Bidders.csv',
                        names=columns, header=0)
@@ -78,6 +93,10 @@ def bidders_setup():
     return cursor.fetchall()
 
 def sellers_setup():
+    ''' This function sets up the Sellers
+        table based on the csv file
+        Sellers.csv
+    '''
     columns = ['email', 'bank_routing_number', 'bank_account_number', 'balance']
     data = pd.read_csv('data/Sellers.csv',
                        names=columns, header=0)
@@ -105,6 +124,10 @@ def sellers_setup():
     return cursor.fetchall()
 
 def local_vendors_setup():
+    ''' This table sets up the local
+        vendors table using the csv file
+        Local_Vendors.csv
+    '''
     columns = ['email', 'business_name', 'business_address_id', 'customer_service_phone_number']
     data = pd.read_csv('data/Local_Vendors.csv',
                        names=columns, header=0)
@@ -132,6 +155,10 @@ def local_vendors_setup():
     return cursor.fetchall()
 
 def helpdesk_setup():
+    '''This function sets up the helpdesk
+       table based on the csv file
+       Helpdesk.csv
+    '''
     columns = ['email', 'position']
     data = pd.read_csv('data/Helpdesk.csv',
                        names=columns,header=0)
@@ -155,6 +182,10 @@ def helpdesk_setup():
     return cursor.fetchall()
 
 def auction_listings_setup():
+    '''This table sets up the auction
+       listings table using the csv file
+       Auction_Listings.csv
+    '''
     columns = ['seller_email', 'listing_ID', 'category', 'auction_title', 'product_name', 'product_description', 'quantity', 'reserve_price', 'max_bids', 'status']
     data = pd.read_csv('data/Auction_Listings.csv', names=columns, header=0)
     col1 = data['seller_email'].values
@@ -191,6 +222,10 @@ def auction_listings_setup():
     return cursor.fetchall()
 
 def bids_setup():
+    '''This function sets up the bids
+       table using the csv file
+       Bids.csv
+    '''
     columns = ['bid_ID', 'seller_email', 'listing_ID', 'bidder_email', 'bid_price']
     data = pd.read_csv('data/Bids.csv', names=columns, header=0)
     col1 = data['bid_ID'].values
@@ -217,6 +252,9 @@ def bids_setup():
     return cursor.fetchall()
 
 def address_setup():
+    '''This function sets up the address
+       table using the csv file Address.csv
+    '''
     columns = ['address_ID', 'zipcode', 'street_number', 'street_name']
     data = pd.read_csv('data/Address.csv', names=columns, header=0)
     col1 = data['address_ID'].values
@@ -241,6 +279,10 @@ def address_setup():
     return cursor.fetchall()
 
 def category_setup():
+    '''This function sets up the categories
+       table using the csv file
+       Categories.csv
+    '''
     columns = ['parent_category', 'category_name']
     data = pd.read_csv('data/Categories.csv', names=columns, header=0)
     col1 = data['parent_category'].values
@@ -261,6 +303,10 @@ def category_setup():
     return cursor.fetchall()
 
 def credit_card_setup():
+    '''This function sets up the credit
+       card table using the csv file
+       Credit_Cards.csv
+    '''
     columns = ['credit_card_num', 'card_type', 'expire_month', 'expire_year', 'security_code', 'owner_email']
     data = pd.read_csv('data/Credit_Cards.csv', names=columns, header=0)
     col1 = data['credit_card_num'].values
@@ -289,6 +335,10 @@ def credit_card_setup():
     return cursor.fetchall()
 
 def rating_setup():
+    '''This function sets up the ratings
+       table using the csv file
+       Ratings.csv
+    '''
     columns = ['bidder_email', 'seller_email', 'date', 'rating', 'rating_description']
     data = pd.read_csv('data/Ratings.csv', names=columns, header=0)
     col1 = data['bidder_email'].values
@@ -315,6 +365,9 @@ def rating_setup():
     return cursor.fetchall()
 
 def request_setup():
+    '''This function sets up the requests
+       table using the csv file Requests.csv
+    '''
     columns = ['request_ID', 'sender_email', 'helpdesk_staff_email', 'request_type', 'request_description', 'request_status']
     data = pd.read_csv('data/Requests.csv', names=columns, header=0)
     col1 = data['request_ID'].values
@@ -343,6 +396,10 @@ def request_setup():
     return cursor.fetchall()
 
 def transaction_setup():
+    '''This function sets up the
+       transaction table using the csv file
+       Transactions.csv
+    '''
     columns = ['transaction_ID', 'seller_email', 'listing_ID', 'bidder_email', 'date', 'payment']
     data = pd.read_csv('data/Transactions.csv', names=columns, header=0)
     col1 = data['transaction_ID'].values
@@ -371,6 +428,10 @@ def transaction_setup():
     return cursor.fetchall()
 
 def zipcode_setup():
+    '''This function sets up the zipcode
+       table using the csv file
+       Zipcode_Info.csv
+    '''
     columns = ['zipcode', 'city', 'state']
     data = pd.read_csv('data/Zipcode_Info.csv', names=columns, header=0)
     col1 = data['zipcode'].values
@@ -392,19 +453,33 @@ def zipcode_setup():
         conn.commit()
     return cursor.fetchall()
 
-database_setup()
+database_setup() # Call the database_setup function to setup the database before launching NittanyAuction
 app = Flask(__name__)
+''' These next three lines setup the sessions
+    that will be used to store state information
+    needed for other functionalities.
+'''
 app.config["SESSION_PERMANENT"] = False     # Sessions expire when browser closes
 app.config["SESSION_TYPE"] = "filesystem"     # Store session data on the filesystem
 Session(app)
 
 @app.route('/')
 def index():
+    '''This function displays the main homepage
+       index.html
+    '''
     session['webpage'] = 'index'
     return render_template('index.html')
 
 @app.route('/login.html', methods=['POST', 'GET'])
 def login():
+    '''This function displays the login page
+       and handles the user input. Based on
+       the input the function will determine
+       if the user has an invalid username/
+       password, or the user is trying to
+       login into a role they don't have
+    '''
     error = None
     session['webpage'] = 'login'
     if request.method == 'POST':
@@ -460,6 +535,19 @@ def login():
 
 @app.route('/registration.html', methods=['POST', 'GET'])
 def user_registration():
+    '''This function displays the registration
+       page and handles the user input. Based
+       on the input, the function will check
+       to see if the email address is already
+       in the system. If not, then the newly
+       created user will be directed to the login
+       page where they can log in. If the user
+       selects the sellers role, then they
+       will need to determine if their role
+       is just a regular seller or a local
+       vendor before proceeding to the login
+       page.
+    '''
     error = None
     session['webpage'] = 'registration'
     if request.method == "POST":
@@ -492,12 +580,20 @@ def user_registration():
             else:
                 error = "User role not recognized! Select one of the user roles displayed"
             conn.commit()
+            conn.close()
             return redirect(url_for('login'))
 
     return render_template('/registration.html', error=error)
 
 @app.route('/seller_or_vendor.html', methods=['POST', 'GET'])
 def seller_or_vendor():
+    '''This function displays the seller or
+       local vendors webpage and handles
+       the user input. Based on the user
+       input, the function will then
+       assign the newly created user into
+       the proper role specific table.
+    '''
     error=None
     if request.method == "POST":
         seller_role = request.form['seller_role']
@@ -509,6 +605,7 @@ def seller_or_vendor():
             cursor.execute("INSERT INTO Users(email, password) VALUES (?,?)", (user_email, user_password,))
             cursor.execute("INSERT INTO Sellers(email, bank_routing_number, bank_account_number, balance) VALUES (?, NULL, NULL, 0)", (user_email,))
             conn.commit()
+            conn.close()
             return redirect(url_for('login'))
         else:
             business_address_id = hashlib.md5(user_email.encode()).hexdigest()
@@ -518,11 +615,29 @@ def seller_or_vendor():
             cursor.execute("INSERT INTO Address(address_ID, zipcode, street_number, street_name) VALUES (?,0,NULL,NULL)", (business_address_id,))
             cursor.execute("INSERT OR IGNORE INTO Zipcodes(zipcode, city, zipcode_state) VALUES (0, NULL, NULL)")
             conn.commit()
+            conn.close()
             return redirect(url_for('login'))
 
     return render_template('seller_or_vendor.html', error=error)
 @app.route('/change_password.html', methods=['POST', 'GET'])
 def change_password():
+    '''This function displays the change
+       password webpage and handles the
+       user input. Based on the user
+       input, the function will then
+       check to see if the user email
+       address doesn't exist, if the
+       new password field is empty, if the
+       confirm new password field is empty,
+       if the new password field and the
+       confirm new password field are not
+       equal to each other, and if the
+       new password is equal to the current
+       password. If the user input is valid,
+       then the new password is then hashed
+       using SHA256 and stored in the proper
+       row of the Users table.
+    '''
     error = None
     previous_webpage = session.get('webpage')
     if request.method == "POST":
@@ -544,6 +659,7 @@ def change_password():
                     hashed_password = hashlib.sha256(new_password.encode()).hexdigest()
                     cursor.execute("UPDATE Users Set password = ? WHERE email LIKE ?", (hashed_password,user_email,))
                     conn.commit()
+                    conn.close()
                     if previous_webpage == 'bidder_settings':
                         return redirect(url_for('bidder_settings'))
                     elif previous_webpage == 'seller_settings':
@@ -556,6 +672,11 @@ def change_password():
     return render_template('/change_password.html', error=error, previous_webpage=previous_webpage)
 @app.route('/bidder.html')
 def bidder():
+    '''This function displays the bidder homepage
+       and handles the user input that will
+       direct them to different ares of
+       NittanyAuction.
+    '''
     email = session.get('email')
     session['role'] = 'bidder'
     conn = sqlite3.connect("NittanyAuctionDB")
@@ -568,6 +689,13 @@ def bidder():
 
 @app.route('/bidder_settings.html')
 def bidder_settings():
+    '''This function displays the bidder
+       settings webpage and handles the
+       user input that will take them
+       to different webpages to change
+       any user settings available to
+       their role.
+    '''
     session['webpage'] = 'bidder_settings'
     email = session.get('email')
     password = session.get('password')
@@ -583,6 +711,11 @@ def bidder_settings():
 
 @app.route('/seller.html')
 def seller():
+    '''This function displays the seller
+       homepage and handles the user input
+       that will direct the user to different
+       areas of NittanyAuction.
+    '''
     session['webpage'] = 'seller'
     user_email = session.get('email')
     conn = sqlite3.connect("NittanyAuctionDB")
@@ -603,6 +736,13 @@ def seller():
 
 @app.route('/seller_settings.html', methods=["GET", "POST"])
 def seller_settings():
+    '''This function displays the seller
+       settings webpage and handles the
+       user input that will take them to
+       different webpages to change
+       any user settings available for
+       their role.
+    '''
     email = session.get('email')
     user_role = session.get('role')
     session['webpage'] = 'seller_settings'
@@ -617,6 +757,19 @@ def seller_settings():
 
 @app.route('/change_bank_routing_number.html', methods=['POST', 'GET'])
 def change_bank_routing_number():
+    '''This function displays the change
+       bank routing number portal and
+       handles the user input. Based on the
+       user input, the function will check
+       to see if the new routing number is
+       the same as the current routing number,
+       if the new routing number field is
+       empty, and if the new routing number
+       is in an incorrect format. If the user
+       input is valid, the function will update
+       the proper row in the sellers table with
+       the new routing number.
+    '''
     error=None
     if request.method == "POST":
         new_bank_routing_number = str(request.form['new_bank_routing_number'])
@@ -638,12 +791,26 @@ def change_bank_routing_number():
         else:
             cursor.execute("UPDATE Sellers SET bank_routing_number = ? WHERE email = ?", (new_bank_routing_number, user_email))
             conn.commit()
+            conn.close()
             return redirect(url_for('seller_settings'))
 
     return render_template('change_bank_routing_number.html', error=error)
 
 @app.route("/change_bank_account_number.html", methods=['POST', 'GET'])
 def change_bank_account_number():
+    '''This function displays the change
+       bank account number portal and handles
+       the user input. Based on the user input,
+       the function will check to see if the
+       new bank account number is in an incorrect
+       format, if the new bank account number
+       is the same as the current bank account
+       number, and if the new bank account number
+       field is empty. If the user input is valid,
+       then the function will update the proper
+       row in the sellers table with the new
+       bank account number.
+    '''
     error=None
     if request.method == "POST":
         new_bank_account_number = str(request.form['change_bank_account_number'])
@@ -665,11 +832,19 @@ def change_bank_account_number():
         else:
             cursor.execute("UPDATE Sellers SET bank_account_number = ? WHERE email = ?", (new_bank_account_number, user_email))
             conn.commit()
+            conn.close()
             return redirect(url_for('seller_settings'))
 
     return render_template('change_bank_account_number.html', error=error)
 @app.route('/local_vendor_settings.html')
 def local_vendor_settings():
+    '''This function displays the local vendor
+       settings webpage and handles the user
+       input that will take them to different
+       webpages that will allow the user to
+       change settings that are available to
+       their role.
+    '''
     email = session.get('email')
     conn = sqlite3.connect("NittanyAuctionDB")
     cursor = conn.cursor()
@@ -681,6 +856,18 @@ def local_vendor_settings():
 
 @app.route('/change_business_name.html', methods=['POST', 'GET'])
 def change_business_name():
+    '''This function displays the change
+       business name portal and handles the
+       user input. Based on the user input,
+       the function will check to see if the
+       new business name field is empty, and if
+       the new business name is the same as
+       the current business name. If the
+       user input is valid, then the function
+       will update the proper row in the
+       local vendors table with the new
+       business name.
+    '''
     error=None
     if request.method == "POST":
         email = session.get('email')
@@ -701,12 +888,27 @@ def change_business_name():
         else:
             cursor.execute("UPDATE Local_Vendors SET business_name = ? WHERE email = ?", (new_business_name, email,))
             conn.commit()
+            conn.close()
             return redirect(url_for('local_vendor_settings'))
 
     return render_template("change_business_name.html", error=error)
 
 @app.route('/change_customer_service_phone_number.html', methods=['POST', 'GET'])
 def change_customer_service_phone_number():
+    '''This function displays the change
+       customer service phone number portal
+       and handles the user input. Based on
+       the user input, the function will
+       check to see if the new phone number
+       is in an incorrect format, if the new
+       phone number field is empty, and if the
+       new phone number is the same as the
+       current phone number. If the user
+       input is valid, the function will
+       update the proper row in the local
+       vendors table with the new customer
+       service phone number.
+    '''
     error=None
     if request.method == "POST":
         email = session.get('email')
@@ -725,7 +927,6 @@ def change_customer_service_phone_number():
             error = "Phone Number field is empty! Type in a phone number based on the format above!"
         elif new_service_phone_number == current_service_phone_number:
             error = "New Phone Number is the same as the Current Phone Number! Type in a different phone number!"
-            print(error)
         else:
             for iterator in range(len(current_service_phone_number)):
                 if new_service_phone_number == str(current_service_phone_number[iterator][3]) and str(current_service_phone_number[iterator][0]) != email:
@@ -742,16 +943,31 @@ def change_customer_service_phone_number():
             else:
                 cursor.execute("UPDATE Local_Vendors SET customer_service_phone_number = ? WHERE email = ?", (new_service_phone_number, email,))
                 conn.commit()
+                conn.close()
                 return redirect(url_for('local_vendor_settings'))
 
     return render_template("change_customer_service_phone_number.html", error=error)
 @app.route('/helpdesk.html')
 def helpdesk():
+    '''This function displays the helpdesk
+       homepage.
+    '''
     session['webpage'] = 'helpdesk'
     return render_template('helpdesk.html')
 
 @app.route('/change_firstname.html', methods=['POST', 'GET'])
 def change_firstname():
+    '''This function displays the change
+       first name portal and handles the
+       user input. Based on the user input,
+       the function will check to see if
+       the new firstname is the same as the
+       current firstname, and if the new
+       firstname field is empty. If the user
+       input is valid, the function will
+       update proper row in the bidders table
+       with the new firstname.
+    '''
     error = None
     session['webpage'] = 'change_firstname'
     if request.method == "POST":
@@ -773,12 +989,24 @@ def change_firstname():
         else:
             cursor.execute("UPDATE Bidders SET first_name = ? WHERE email LIKE ?", (new_firstname,user_email,))
             conn.commit()
+            conn.close()
             return redirect(url_for('bidder_settings'))
 
     return render_template('change_firstname.html', error=error)
 
 @app.route('/change_lastname.html', methods=['POST', 'GET'])
 def change_lastname():
+    '''This function displays the change
+       last name portal and handles the
+       user input. Based on the user input,
+       the function will check to see if the
+       new lastname field is empty, and if
+       the new lastname is the same as the
+       current lastname. If the user input
+       is valid, the function will update
+       the proper row in the bidders table
+       with the new lastname.
+    '''
     error = None
     session['webpage'] = 'change_lastname'
     if request.method == "POST":
@@ -799,11 +1027,22 @@ def change_lastname():
         else:
             cursor.execute("UPDATE Bidders SET last_name = ? WHERE email LIKE ?", (new_lastname, user_email,))
             conn.commit()
+            conn.close()
             return redirect(url_for('bidder_settings'))
     return render_template('change_lastname.html', error=error)
 
 @app.route('/change_age.html', methods=['POST', 'GET'])
 def change_age():
+    '''This function displays the change age
+       portal and handles the user input.
+       Based on the user input, the function
+       will check to see if the new age field
+       is empty, if the new age is a non-positive
+       number, and if the new age is the same
+       as the current age. If the user input is
+       valid, the function will update the proper
+       row in the bidders table with the new age.
+    '''
     error = None
     session['webpage'] = 'change_age'
     if request.method == "POST":
@@ -827,11 +1066,23 @@ def change_age():
         else:
             cursor.execute("UPDATE Bidders SET age = ? WHERE email Like ?", (new_age, user_email,))
             conn.commit()
+            conn.close()
             return redirect(url_for('bidder_settings'))
     return render_template('change_age.html', error=error)
 
 @app.route("/change_major.html", methods=['POST', 'GET'])
 def change_major():
+    '''This function displays the change
+       major portal and handles the user
+       input. Based on the user input, the
+       function will check to see if the
+       new major field is empty, and if
+       the new major is the same as the
+       current major. If the user input is
+       valid, the function will update the
+       proper row in the bidders table with
+       the new major.
+    '''
     error = None
     session['webpage'] = 'change_major'
     if request.method == "POST":
@@ -853,12 +1104,20 @@ def change_major():
         else:
             cursor.execute("UPDATE Bidders SET major = ? WHERE email LIKE ?", (new_major, user_email,))
             conn.commit()
+            conn.close()
             return redirect(url_for('bidder_settings'))
 
     return render_template('change_major.html', error=error)
 
 @app.route("/change_address.html")
 def change_address_settings():
+    '''This function displays the change address
+        settings webpage and handles the user
+        input that will take them to different
+        webpages that will allow the user to
+        change settings that are available to
+        their role (bidder or local vendors).
+    '''
     email = session.get('email')
     session['webpage'] = 'change_address'
     role = session.get('role')
@@ -878,6 +1137,13 @@ def change_address_settings():
 
 @app.route("/change_zipcode_settings.html", methods=['POST', 'GET'])
 def change_zipcode():
+    '''This function displays the change zipcode
+       settings webpage and handles the user
+       input that will take them to different
+       webpages that will allow the user to
+       change settings that are available to
+       their role.
+    '''
     email = session.get('email')
     session['webpage'] = 'change_zipcode_settings'
     role = session.get('role')
@@ -897,6 +1163,30 @@ def change_zipcode():
 
 @app.route("/change_zipcode_number.html", methods=['POST', 'GET'])
 def change_zipcode_number():
+    '''This function displays the change
+       zipcode number portal and handles
+       the user input. Based on the user
+       input, the function will check to
+       see if the new zipcode number is 0 (
+       0 is the default zipcode number upon
+       creation. The user will need to change
+       this zipcode number to a positive
+       zipcode number.), if the new zipcode
+       number field is empty, and if the
+       new zipcode number is the same as the
+       current zipcode number. If the user
+       input is valid, then the function
+       will check to see if the user inputted
+       a new zipcode number or an existing
+       zipcode number in the zipcodes table.
+       If the user inputted a new zipcode number,
+       the user will be taken to another portal
+       to input the city and state associated
+       with the new zipcode number. Otherwise,
+       the function will update the proper
+       row in the address table with the new
+       zipcode number.
+    '''
     error=""
     session['webpage'] = 'change_zipcode_number'
     if request.method == "POST":
@@ -921,11 +1211,11 @@ def change_zipcode_number():
         else:
             cursor.execute("SELECT * FROM Zipcodes WHERE zipcode = ?", (new_zipcode_number,))
             current_zipcode_number = cursor.fetchall()
-            print(current_zipcode_number)
             if len(current_zipcode_number) == 1:
                 cursor.execute("UPDATE Address SET zipcode = ? WHERE address_ID = ?",
                                (new_zipcode_number, user_address_id,))
                 conn.commit()
+                conn.close()
                 city = str(current_zipcode_number[0][1])
                 zipcode_state = str(current_zipcode_number[0][2])
                 return render_template('change_zipcode_settings.html', zipcode_number=new_zipcode_number, city=city, zipcode_state=zipcode_state)
@@ -936,6 +1226,20 @@ def change_zipcode_number():
 
 @app.route("/change_city_state.html", methods=['POST', 'GET'])
 def change_city_state():
+    '''This function handles the change
+       city and state portal and handles the
+       user input. Based on the user input,
+       the function will check to see if the
+       new city or new state fields are empty,
+       and if the new city/state pair already exist
+       for another zipcode number. If the user
+       input is valid, then the function will
+       update the proper row in the address table
+       with the new zipcode number. Then, the
+       function will insert the new zipcode number,
+       the new city name, and the new state into
+       a new row.
+    '''
     error=None
     if request.method == "POST":
         zipcode_number = int(session.get('zipcode'))
@@ -953,12 +1257,25 @@ def change_city_state():
                            (zipcode_number, user_address_id,))
             cursor.execute("INSERT OR IGNORE INTO Zipcodes(zipcode, city, zipcode_state) VALUES (?,?,?)", (zipcode_number, new_city_name, new_state_name,))
             conn.commit()
+            conn.close()
             return render_template('change_zipcode_settings.html', zipcode_number=zipcode_number, city=new_city_name, zipcode_state=new_state_name)
 
     return render_template('change_city_state.html', error=error)
 
 @app.route("/change_street_number.html", methods=['POST', 'GET'])
 def change_street_number():
+    '''This function displays the change
+       street number portal and handles the
+       user input. Based on the user input,
+       the function will check to see if the
+       new street number is a non-positive
+       number, and if the new street number
+       is the same as the current street
+       number. If the user input is valid,
+       then the function will update the
+       proper row in the address table with
+       the new street number.
+    '''
     error=None
     if request.method == "POST":
         new_street_number = int(str(request.form['new_street_number']))
@@ -987,6 +1304,7 @@ def change_street_number():
         else:
             cursor.execute("UPDATE Address SET street_number = ? WHERE address_ID = ?", (new_street_number, user_address_id,))
             conn.commit()
+            conn.close()
             zipcode = int(current_address[1])
             street_name = current_address[3]
             return render_template('change_address.html', zipcode=zipcode, street_number=new_street_number, street_name=street_name)
@@ -995,6 +1313,18 @@ def change_street_number():
 
 @app.route("/change_street_name.html", methods=['POST', 'GET'])
 def change_street_name():
+    '''This function displays the change
+       street name portal and handles the
+       user input. Based on the user input,
+       the function will check to see if the
+       new street name field is empty, and if
+       the new street name is the same as
+       the current street name. If the user
+       input is valid, then the function
+       will update the proper row in the
+       address table with the new street
+       name.
+    '''
     error=None
     if request.method == "POST":
         new_street_name = request.form['new_street_name']
@@ -1021,6 +1351,7 @@ def change_street_name():
         else:
             cursor.execute("UPDATE Address SET street_name = ? WHERE address_ID = ?", (new_street_name, user_address_id,))
             conn.commit()
+            conn.close()
             zipcode = int(str(current_address[1]))
             street_number = current_address[2]
             return render_template('change_address.html', zipcode=zipcode, street_number=street_number, street_name=new_street_name)
@@ -1029,6 +1360,14 @@ def change_street_name():
 
 @app.route('/view_credit_cards.html')
 def view_credit_cards():
+    '''This function displays the view credit
+       card settings webpage (number of
+       credit cards the user has) and handles
+       the user input that will take them to
+       different webpages that will allow
+       the user to add/remove credit cards
+       associated with their email.(bidder).
+    '''
     user_email = session.get('email')
     conn = sqlite3.connect("NittanyAuctionDB")
     cursor = conn.cursor()
@@ -1038,6 +1377,27 @@ def view_credit_cards():
 
 @app.route('/add_credit_card.html', methods=['POST', 'GET'])
 def add_credit_card():
+    '''This function displays the add credit
+       card portal and handles the user input.
+       based on the user input, the function will
+       check to see if the new credit card number
+       is in an incorrect format, if the new credit
+       card number field is empty, if the new
+       credit card type field is empty, if the
+       new expire month field is empty, if the
+       new expire year field is empty, if the
+       new security code field is empty, if the
+       new credit card number is already registered
+       with another user, if the expire month is
+       a number not between 1 and 12, if the expire year
+       is a number less than 1950, and if the security
+       code is a number not between 0 and 999. If the user
+       input is valid, then the function will
+       insert the new credit card number, new
+       credit card type, expire month, expire
+       year, security code, and the user email
+       into a new row in the credit cards table.
+    '''
     error=None
     if request.method == "POST":
         new_credit_card_number = request.form['new_credit_card_number']
@@ -1092,6 +1452,21 @@ def add_credit_card():
 
 @app.route('/remove_credit_card.html', methods=['POST', 'GET'])
 def remove_credit_card():
+    '''This function displays the remove
+       credit card portal and handles the
+       user input. Based on the user input,
+       the function will check to see if
+       the credit card number is in an
+       incorrect format, if the credit
+       card number is associated with a
+       different email, and if the
+       remove credit card number field is
+       empty. If the user input is valid,
+       then the function will use the
+       DELETE FROM SQL command to remove
+       the row associated with the user email
+       and the inputted credit card number.
+    '''
     error = None
     if request.method == 'POST':
         credit_card_number = request.form['delete_credit_card']
@@ -1131,6 +1506,13 @@ def remove_credit_card():
 
 @app.route("/product_listings.html", methods=['POST', 'GET'])
 def product_listings():
+    '''This function displays the product
+       listing webpage and allows users to
+       click on subcategories to explore
+       what other subcategories exist
+       inside of the clicked-on
+       parent category.
+    '''
     category_selected= request.args.get("category_name","All")#All is root categroy
     conn = sqlite3.connect("NittanyAuctionDB")
     conn.row_factory = sqlite3.Row
