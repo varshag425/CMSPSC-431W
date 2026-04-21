@@ -2007,6 +2007,35 @@ def product_detail(Listing_ID):
     conn.close()
     return render_template('product_detail.html', listing=listing, bids=bids, current_bid=current_bid, seller_rating=rating_row[0], rating_count=rating_row[1], image_url=image_url, error=None, success=None)
 
+@app.route('/helpdeskbidder.html', methods=['GET','POST'])
+def helpdeskbidder():
+    email = session.get('email')
+    session['role'] = 'bidder'
+    session['webpage'] = 'helpdeskbidder'
+    conn = sqlite3.connect("NittanyAuctionDB")
+    cursor = conn.cursor()
+
+    if request.method == 'POST':
+        request_type = request.form.get('type')
+        request_description = request.form.get('description')
+        if request_type != None and request_description != None:
+            cursor.execute("SELECT MAX(request_id) FROM Requests")
+            maxid= cursor.fetchone()[0]
+            if maxid is None:
+                new_request_id = 100
+            else: new_request_id = maxid+1
+            cursor.execute("INSERT INTO Requests (request_id, sender_email,helpdesk_staff_email, request_type, request_description, request_status) VALUES (?,?,'helpdeskteam@lsu.edu',?,?,0)",
+                           (new_request_id, email,request_type,request_description))
+            conn.commit()
+
+    cursor.execute("SELECT * FROM Requests WHERE sender_email = ? AND request_status = 1", (email,))
+    complete_requests = cursor.fetchall()
+
+    cursor.execute("SELECT * FROM Requests WHERE sender_email = ? AND request_status = 0", (email,))
+    active_requests = cursor.fetchall()
+
+    conn.close()
+    return render_template('helpdeskbidder.html', email=email,active_requests=active_requests,complete_requests=complete_requests)
 
 if __name__ == '__main__':
     app.run()

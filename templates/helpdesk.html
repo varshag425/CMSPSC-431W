@@ -27,6 +27,40 @@
             font-size: .92rem;
         }
         .welcome-bar strong { color: #d6ecff; }
+        .dashboard{
+            background-color: #c5dcf5;
+            border-radius: 10px;
+            padding: 2rem;
+        }
+        .btn-blue {
+            background: #1a6fc4;
+            border: none;
+            color: #fff;
+            font-weight: 600;
+            font-size: .95rem;
+            padding: .75rem 0;
+            border-radius: 6px;
+            text-decoration: none;
+            display: block;
+            text-align: center;
+            width: 100%;
+            transition: background .2s;
+            margin-top: 10px;
+            margin-bottom: 20px;
+        }
+        .btn-blue:hover { background: #155a9e; color: #fff; }
+
+        .input{
+            padding: 10px;
+            margin-top:10px;
+            margin-bottom:10px;
+            border-radius:10px;
+        }
+
+        .label{
+            font-size: 32px;
+        }
+
 
     </style>
 </head>
@@ -39,7 +73,11 @@
 <div class="welcome-bar">
     Welcome back, <strong>{{ email }}</strong>
 </div>
+<div class="dashboard">
 <h1>HelpDesk Dashboard</h1>
+<div class="container mt-4">
+<div class="row">
+<div class="col-8">
 <h2>New Requests</h2>
 <div class="table-responsive small">
 {% if new_requests %}
@@ -73,7 +111,7 @@
         <option value="{{ new_request[0] }}">{{ new_request[0] }}</option>
     {% endfor %}
     </select>
-    <button type="submit">Take New Request</button>
+    <button class="btn-blue" type="submit">Take New Request</button>
 </form>
 <h2>Active Requests</h2>
 <div class="table-responsive small">
@@ -106,7 +144,7 @@
         <option value="{{ active_request[0] }}">{{ active_request[0] }}</option>
     {% endfor %}
     </select>
-    <button type="submit">Complete Request</button>
+    <button class="btn-blue" type="submit">Complete Request</button>
 </form>
 <h2>Completed Requests</h2>
 <div class="table-responsive small">
@@ -133,6 +171,8 @@
     </tbody>
 </table>
 </div>
+</div>
+<div class="col-4">
 <h2>Create New Category</h2>
 <form method="POST">
     <label>Parent Category:</label>
@@ -143,9 +183,13 @@
     {% endfor %}
     </select>
     <label>New Category:</label>
-    <input type="text" name="new_category">
-    <button type="submit">Add New Category</button>
+    <input type="text" class="input" name="new_category">
+    <button class="btn-blue" type="submit">Add New Category</button>
 </form>
+</div>
+</div>
+</div>
+</div>
 <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.min.js" integrity="sha384-G/EV+4j2dNv+tEPo3++6LCgdCROaejBqfUeNjuKAiuXbjrxilcCdDz6ZAVfHWe1Y" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
