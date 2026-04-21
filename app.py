@@ -533,18 +533,6 @@ def login():
             error = "Invalid username or password"
     return render_template('login.html', error=error)
 
-'''def add_name(email, password):
-    # hash the password using sha256
-    password = hashlib.sha256(password.encode()).hexdigest()
-    conn = sqlite3.connect("NittanyAuctionDB")
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM Users WHERE email= ? AND password= ?", (email, password))
-    result = cursor.fetchall()
-    if result:
-        return 1
-    else:
-        return 0'''
-
 @app.route('/registration.html', methods=['POST', 'GET'])
 def user_registration():
     '''This function displays the registration
@@ -969,6 +957,10 @@ def change_customer_service_phone_number():
 
 @app.route('/seller_listings.html')
 def seller_listings():
+    '''This function displays the seller
+       listings webpage and displays all
+       the auction listings for the user
+    '''
     email = session.get('email')
     session['webpage'] = 'seller_listings'
     conn = sqlite3.connect("NittanyAuctionDB")
@@ -997,6 +989,28 @@ def seller_listings():
 
 @app.route('/create_listing.html', methods=['POST', 'GET'])
 def create_listing():
+    '''This function displays the create
+       listing portal and handles the user
+       input. Based on the user input, the
+       function checks to see if the
+       auction title field is empty, if the
+       product name field is empty, if the
+       category field is empty, if the
+       quantity field is empty, if the
+       quantity is a non-positive number,
+       if the max bids field is empty, and
+       if the max bids is a non-positive
+       number. Then, the function checks
+       to see if the reserve price is a
+       negative number. If the user input
+       is valid, then the function will
+       insert into the auction listings
+       table a new row containing the
+       inputed auction title, product name,
+       product description, category,
+       quantity, reserve price, and maximum
+       number of bids.
+    '''
     error = None
     email = session.get('email')
     conn = sqlite3.connect("NittanyAuctionDB")
@@ -1049,6 +1063,33 @@ def create_listing():
 
 @app.route('/edit_listing.html', methods=['POST', 'GET'])
 def edit_listing():
+    '''This function displays the edit
+       listing portal and handles the
+       user input. Based on the user input,
+       the function will check to see if
+       the listing id under a user doesn't
+       exist, if the auction has been
+       completed for a listing, if the
+       listing already has bids on it
+       and is active, if the auction title
+       field is empty, if the product name
+       field is empty, if the category
+       field is empty, if the quantity field
+       is empty, if the quantity is a
+       non-positive number, if the max
+       bids field is empty, and if the
+       max bids is a non-positive number.
+       Then, the function will check to see
+       if the reserve price is a negative
+       number. If the user input is valid,
+       then the function will update the
+       proper row in auction listings
+       with the updated category,
+       auction title, product name,
+       product description, quantity,
+       maximum number of bids, and
+       reserve price.
+    '''
     error = None
     email = session.get('email')
     listing_ID = request.args.get('listing_ID')
@@ -1117,6 +1158,20 @@ def edit_listing():
 
 @app.route('/remove_listing.html', methods=['POST', 'GET'])
 def remove_listing():
+    '''This function displays the
+       remove listing portal and handles the
+       user input. Based on the user input,
+       the function will check to see if the
+       auction listing exists for that user,
+       if the auction listing is inactive,
+       and if the removal reason field is
+       empty. If the user input is valid,
+       then the function will update the
+       proper row inside the auction listings
+       table with the new status becoming 0
+       to represent an inactive auction
+       listing.
+       '''
     error = None
     email = session.get('email')
     listing_ID = request.args.get('listing_ID')
@@ -1860,6 +1915,14 @@ def product_listings():
 
 @app.route('/listing/<int:Listing_ID>')
 def product_detail(Listing_ID):
+    '''This function takes in a listing
+       id and displays the auction listing
+       information along with the bidding
+       information for a bidder. This
+       function will also display the
+       rating for the seller for that
+       particular auction listing.
+    '''
     conn = sqlite3.connect("NittanyAuctionDB")
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
