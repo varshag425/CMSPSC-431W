@@ -523,7 +523,8 @@ def login():
                 cursor.execute("SELECT * FROM Helpdesk WHERE email=?", (email,))
                 if cursor.fetchone():
                     conn.close()
-                    return redirect(url_for('helpdesk'))
+                    session['email'] = email
+                    return redirect(url_for('helpdesk', email=email))
                 else: error = "Invalid username or password for helpdesk"
             else:
                 conn.close()
@@ -682,7 +683,7 @@ def change_password():
 
     return render_template('/change_password.html', error=error, previous_webpage=previous_webpage)
 
-app.route('/bidder.html')
+@app.route('/bidder.html')
 def bidder():
     '''This function displays the bidder homepage
        and handles the user input that will
@@ -1157,13 +1158,50 @@ def remove_listing():
     conn.close()
     return render_template('remove_listing.html', error=error, listing=listing)
 
-@app.route('/helpdesk.html')
+@app.route('/helpdesk.html', methods=['GET','POST'])
 def helpdesk():
     '''This function displays the helpdesk
        homepage.
     '''
+    email = session.get('email')
+    session['role'] = 'helpdesk'
+    conn = sqlite3.connect("NittanyAuctionDB")
+    cursor = conn.cursor()
+    cursor.execute("SELECT email, position FROM Helpdesk WHERE email = ?", (email,))
+    user = cursor.fetchone()
+    email = user[0]
+    position = user[1]
+
+    cursor.execute("SELECT * FROM Categories")
+    categories = cursor.fetchall()
+
+    if request.method == 'POST':
+        new_request = request.form.get('new_request')
+        if new_request != None:
+            cursor.execute("UPDATE Requests SET helpdesk_staff_email = ?, request_status=0 WHERE request_id = ?",(email, new_request))
+            conn.commit()
+        completed_request = request.form.get('completed_request')
+        if completed_request != None:
+            cursor.execute("UPDATE Requests SET request_status = 1 WHERE request_id = ?", (completed_request,))
+            conn.commit()
+        new_category = request.form.get('new_category')
+        parent_category = request.form.get('parent_category')
+        if new_category != None and parent_category != None:
+            cursor.execute("INSERT INTO Categories (parent_category, category_name) VALUES (?,?)", (parent_category, new_category))
+            conn.commit()
+
+    cursor.execute("SELECT * FROM Requests WHERE helpdesk_staff_email = ? AND request_status = 1", (email,))
+    complete_requests = cursor.fetchall()
+
+    cursor.execute("SELECT * FROM Requests WHERE helpdesk_staff_email = ? AND request_status = 0", (email,))
+    active_requests = cursor.fetchall()
+
+    cursor.execute("SELECT * FROM Requests WHERE helpdesk_staff_email = 'helpdeskteam@lsu.edu'")
+    new_requests = cursor.fetchall()
+
     session['webpage'] = 'helpdesk'
-    return render_template('helpdesk.html')
+    conn.close()
+    return render_template('helpdesk.html', email=email, position=position, active_requests=active_requests, new_requests=new_requests, complete_requests=complete_requests, categories=categories)
 
 @app.route('/change_firstname.html', methods=['POST', 'GET'])
 def change_firstname():

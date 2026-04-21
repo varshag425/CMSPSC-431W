@@ -4,11 +4,148 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
     <title>HelpDesk</title>
+    <style>
+        body { background: #eef4fb; font-family: 'Playfair Display', sans-serif; }
+
+        .top-nav {
+            background: #1a6fc4;
+            padding: .65rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .top-nav .brand { color: #fff; font-size: 1.4rem; font-weight: 600; text-decoration: none; }
+        .top-nav .brand span { color: #cce4ff; }
+        .top-nav a.signout { color: #cce4ff; font-size: .85rem; text-decoration: none; }
+        .top-nav a.signout:hover { color: #fff; }
+        .welcome-bar {
+            background: #2980d9;
+            color: #fff;
+            padding: .65rem 1.5rem;
+            font-size: .92rem;
+        }
+        .welcome-bar strong { color: #d6ecff; }
+
+    </style>
 </head>
 <body>
-<h1>HelpDesk</h1>
-<p>HelpDesk logged in</p>
+<div class="top-nav">
+    <a class="brand" href="/">Nittany<span>Auction</span></a>
+    <a href="/" class="signout">Sign Out</a>
+</div>
+<!-- WELCOME BAR -->
+<div class="welcome-bar">
+    Welcome back, <strong>{{ email }}</strong>
+</div>
+<h1>HelpDesk Dashboard</h1>
+<h2>New Requests</h2>
+<div class="table-responsive small">
+{% if new_requests %}
+    <table class="table table-striped table-sm">
+        <thead>
+        <th scope="col">ID</th>
+        <th scope="col">Sender</th>
+        <th scope="col">Type</th>
+        <th scope="col">Description</th>
+        </thead>
+        <tbody>
+        {% for new_request in new_requests %}
+        <tr>
+        <td>{{ new_request[0] }}</td>
+        <td>{{ new_request[1] }}</td>
+        <td>{{ new_request[3] }}</td>
+        <td>{{ new_request[4] }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+<label>No new requests at this time.</label>
+{% endif %}
+</div>
+<form method="POST">
+    <label>Take New Request: </label>
+    <select class="form-select" name="new_request">
+    <option value=""></option>
+        {% for new_request in new_requests %}
+        <option value="{{ new_request[0] }}">{{ new_request[0] }}</option>
+    {% endfor %}
+    </select>
+    <button type="submit">Take New Request</button>
+</form>
+<h2>Active Requests</h2>
+<div class="table-responsive small">
+<table class="table table-striped table-sm">
+    <thead>
+    <tr>
+        <th scope="col">ID</th>
+        <th scope="col">Sender</th>
+        <th scope="col">Type</th>
+        <th scope="col">Description</th>
+    </tr>
+    </thead>
+    <tbody>
+{% for active_request in active_requests %}
+    <tr>
+    <td>{{ active_request[0] }}</td>
+    <td>{{ active_request[1] }}</td>
+    <td>{{ active_request[3] }}</td>
+    <td>{{ active_request[4] }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+<form method="POST">
+    <label>Mark Request as Complete: </label>
+    <select class="form-select" name="completed_request">
+    <option value=""></option>
+        {% for active_request in active_requests %}
+        <option value="{{ active_request[0] }}">{{ active_request[0] }}</option>
+    {% endfor %}
+    </select>
+    <button type="submit">Complete Request</button>
+</form>
+<h2>Completed Requests</h2>
+<div class="table-responsive small">
+<table class="table table-striped table-sm">
+    <thead>
+    <tr>
+        <th scope="col">ID</th>
+        <th scope="col">Sender</th>
+        <th scope="col">Type</th>
+        <th scope="col">Description</th>
+    </tr>
+    </thead>
+    <tbody>
+{% for completed_request in complete_requests %}
+{% if completed_request[5] == 1 %}
+    <tr>
+    <td>{{ completed_request[0] }}</td>
+    <td>{{ completed_request[1] }}</td>
+    <td>{{ completed_request[3] }}</td>
+    <td>{{ completed_request[4] }}</td>
+    </tr>
+    {% endif %}
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+<h2>Create New Category</h2>
+<form method="POST">
+    <label>Parent Category:</label>
+    <select class="form-select" name="parent_category">
+    <option value=""></option>
+        {% for category in categories %}
+        <option value="{{ category[1] }}">{{ category[1] }}</option>
+    {% endfor %}
+    </select>
+    <label>New Category:</label>
+    <input type="text" name="new_category">
+    <button type="submit">Add New Category</button>
+</form>
 <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.min.js" integrity="sha384-G/EV+4j2dNv+tEPo3++6LCgdCROaejBqfUeNjuKAiuXbjrxilcCdDz6ZAVfHWe1Y" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
