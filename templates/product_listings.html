@@ -132,9 +132,56 @@
 <body>
 
 <!-- NAV -->
+<!-- NAV -->
 <div class="top-nav">
     <a class="brand" href="/">Nittany<span>Auction</span></a>
+
+    <!-- SEARCH BAR -->
+    <form action="/product_listings.html" method="GET" class="d-flex align-items-center gap-2">
+        <!-- preserve category if one is selected -->
+        {% if category_selected != 'All' %}
+        <input type="hidden" name="category_name" value="{{ category_selected }}">
+        {% endif %}
+        <input
+            type="text"
+            name="search"
+            value="{{ search_query }}"
+            placeholder="Search products..."
+            style="
+                border: none;
+                border-radius: 6px;
+                padding: .4rem .8rem;
+                font-size: .85rem;
+                width: 260px;
+                outline: none;
+                font-family: 'Playfair Display', serif;
+            "
+        >
+        <button type="submit" style="
+            background: #cce4ff;
+            border: none;
+            border-radius: 6px;
+            padding: .4rem .8rem;
+            font-size: .85rem;
+            color: #1a3a5c;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: 'Playfair Display', serif;
+        ">Search</button>
+    </form>
+
     <a href="/bidder.html" class="nav-link-right">My Account</a>
+</div>
+
+<div class="category-label">
+    Category: <strong>{{ category_selected }}</strong>
+    {% if search_query %}
+        — Results for: <strong>"{{ search_query }}"</strong>
+        <a href="/product_listings.html?category_name={{ category_selected }}"
+           style="font-size:.8rem; color:#1a6fc4; margin-left:.5rem;">
+            ✕ Clear search
+        </a>
+    {% endif %}
 </div>
 
 <div class="container-fluid px-4 py-3">
