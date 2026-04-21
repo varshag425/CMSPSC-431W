@@ -1816,34 +1816,52 @@ def product_listings():
        inside of the clicked-on
        parent category.
     '''
-    category_selected= request.args.get("category_name","All")#All is root categroy
+    category_selected= request.args.get("category_name","All")
+    search_query = request.args.get("search", "").strip()
     conn = sqlite3.connect("NittanyAuctionDB")
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    cursor.execute("SELECT category_name, parent_category FROM Categories")#get the categories and parents
+    cursor.execute("SELECT category_name, parent_category FROM Categories")
     rows = cursor.fetchall()
 
-    categories =[]#array of tuples of categories with their name, parents and children
-    for row in rows:#each row in the rows of categories from databse
+    categories =[]
+    for row in rows:
         category = {"category_name":row["category_name"],"parent_category":row["parent_category"],"children":[]}
         categories.append(category)
-    categoriesD = {}#categories dictionary
-    for category in categories:#adding each category to the dictionary so easier to access parent name and children
+    categoriesD = {}
+    for category in categories:
         categoriesD[category["category_name"]] = category
 
-    category_hierarchy = []#the actual hierarchy of categories so subcategories appear underneath their parent
+    category_hierarchy = []
     for category in categories:
-        parent_name = category["parent_category"]#get the parent name of current category
-        if parent_name == "Root":#to find 1st level of children under root cat
+        parent_name = category["parent_category"]
+        if parent_name == "Root":
             category_hierarchy.append(category)
-        else:#all other subcategories not directly under root
-            parent = categoriesD.get(parent_name)#get the parent name from cat dictionary
+        else:
+            parent = categoriesD.get(parent_name)
             if parent: parent["children"].append(category)
 
-    if category_selected=="All":#root cat selected
-        cursor.execute("SELECT product_name, category FROM Auction_Listings WHERE status=1")#status=1 is active auctions
-    else:#more specific cat selected
-        cursor.execute("SELECT product_name, category FROM Auction_Listings WHERE category = ? AND status=1", (category_selected,))#status=1 for active auctions
+    if search_query and category_selected != "All":
+        cursor.execute("""SELECT listing_ID, product_name, category, reserve_price 
+                             FROM Auction_Listings 
+                             WHERE status=1 
+                             AND category = ?
+                             AND (product_name LIKE ? OR auction_title LIKE ? OR product_description LIKE ? or category LIKE ?)""",
+                       (category_selected, f"%{search_query}%", f"%{search_query}%", f"%{search_query}%", f"%{search_query}%"))
+    elif search_query:
+        cursor.execute("""SELECT listing_ID, product_name, category, reserve_price 
+                             FROM Auction_Listings 
+                             WHERE status=1 
+                             AND (product_name LIKE ? OR auction_title LIKE ? OR product_description LIKE ? OR category LIKE ?)""",
+                       (f"%{search_query}%", f"%{search_query}%", f"%{search_query}%", f"%{search_query}%"))
+    elif category_selected != "All":
+        cursor.execute("""SELECT listing_ID, product_name, category, reserve_price 
+                             FROM Auction_Listings WHERE category = ? AND status=1""",
+                       (category_selected,))
+    else:
+        cursor.execute("""SELECT listing_ID, product_name, category, reserve_price 
+                             FROM Auction_Listings WHERE status=1""")
+
     products= cursor.fetchall()
     conn.close()
 
@@ -1911,7 +1929,7 @@ def product_listings():
         "GG Yoga Socks": "https://m.media-amazon.com/images/I/81RNX14aqkL._AC_SX679_.jpg",
     }
 
-    return render_template("product_listings.html", categories=category_hierarchy, products=products, category_selected=category_selected, product_images=product_images)#sends the cat hierarchy, products in category selected and the category selected
+    return render_template("product_listings.html", categories=category_hierarchy, products=products, category_selected=category_selected, product_images=product_images, search_query=search_query)#sends the cat hierarchy, products in category selected and the category selected
 
 @app.route('/listing/<int:Listing_ID>')
 def product_detail(Listing_ID):
@@ -1927,16 +1945,19 @@ def product_detail(Listing_ID):
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
-    cursor.execute("SELECT * FROM Auction_Listings WHERE Listing_ID = ?", (Listing_ID,))
+    cursor.execute("SELECT * FROM Auction_Listings WHERE listing_ID = ?", (Listing_ID,))
     listing = cursor.fetchone()
 
-    cursor.execute("SELECT * FROM Bids WHERE Listing_ID = ? ORDER BY bid_price DESC", (Listing_ID,))
+    cursor.execute("SELECT * FROM Bids WHERE listing_ID = ? ORDER BY bid_price DESC", (Listing_ID,))
     bids = cursor.fetchall()
 
     current_bid = bids[0]['bid_price'] if bids else None
 
-    cursor.execute("SELECT AVG(rating), COUNT(*) FROM Ratings WHERE Seller_Email = ?", (listing['Seller_Email'],))
+    cursor.execute("SELECT AVG(rating), COUNT(*) FROM Ratings WHERE seller_email = ?", (listing['seller_email'],))
     rating_row = cursor.fetchone()
+
+    cursor.execute("SELECT * FROM Ratings WHERE seller_email = ? ORDER BY rating_date DESC", (listing['seller_email'],))
+    reviews = cursor.fetchall()
 
     product_images = {
         "Sephora Rouge Gel Lip Liner": "https://www.sephora.com/productimages/sku/s2871036-main-zoom.jpg?imwidth=1224",
@@ -2005,7 +2026,19 @@ def product_detail(Listing_ID):
     image_url = product_images.get(listing['Product_Name'], None)
 
     conn.close()
-    return render_template('product_detail.html', listing=listing, bids=bids, current_bid=current_bid, seller_rating=rating_row[0], rating_count=rating_row[1], image_url=image_url, error=None, success=None)
+
+    return render_template('product_detail.html',
+                           listing=listing,
+                           bids=bids,
+                           current_bid=current_bid,
+                           avg_rating=rating_row[0],  # template uses avg_rating, not seller_rating
+                           rating_count=rating_row[1],
+                           seller_email=listing['seller_email'],  # template uses seller_email directly
+                           reviews=reviews,  # template needs reviews list
+                           image_url=image_url,
+                           error=None,
+                           success=None
+                           )
 
 @app.route('/helpdeskbidder.html', methods=['GET','POST'])
 def helpdeskbidder():
