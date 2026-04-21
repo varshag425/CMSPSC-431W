@@ -27,6 +27,7 @@ def database_setup():
     request_setup()
     transaction_setup()
     zipcode_setup()
+    listing_removals_setup()
 
 def user_setup():
     ''' This function sets up the Users
@@ -451,6 +452,16 @@ def zipcode_setup():
         val = (zipcode, city, zipcode_state)
         cursor.execute(sql, val)
         conn.commit()
+    return cursor.fetchall()
+
+def listing_removals_setup():
+    '''This function sets up the listing removals table using the csv file Listing_Removals.csv'''
+    conn = sqlite3.connect("NittanyAuctionDB")
+    cursor = conn.cursor()
+
+    cursor.execute('CREATE TABLE IF NOT EXISTS Listing_Removals(listing_ID INTEGER, seller_email VARCHAR(50), removal_reason VARCHAR(300), remaining_bids INTEGER, removal_date VARCHAR(30), PRIMARY KEY(listing_ID), FOREIGN KEY (listing_ID) REFERENCES Auction_Listings(listing_ID), FOREIGN KEY (seller_email) REFERENCES Sellers(email))')
+
+    conn.commit()
     return cursor.fetchall()
 
 database_setup() # Call the database_setup function to setup the database before launching NittanyAuction
@@ -953,6 +964,199 @@ def change_customer_service_phone_number():
                 return redirect(url_for('local_vendor_settings'))
 
     return render_template("change_customer_service_phone_number.html", error=error)
+
+
+@app.route('/seller_listings.html')
+def seller_listings():
+    email = session.get('email')
+    session['webpage'] = 'seller_listings'
+    conn = sqlite3.connect("NittanyAuctionDB")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM Auction_Listings WHERE seller_email = ? ORDER BY listing_ID DESC", (email,))
+    all_listings = cursor.fetchall()
+
+    active_listings = []
+    inactive_listings = []
+    sold_listings = []
+
+    for listing in all_listings:
+        listing_dict = dict(listing)
+        listing_dict['bid_count'] = get_bid_count(listing['listing_ID'])
+        listing_dict['remaining_bids'] = int(listing['max_bids']) - int(listing_dict['bid_count'])
+        if listing['status'] == 1:
+            active_listings.append(listing_dict)
+        elif listing['status'] == 0:
+            inactive_listings.append(listing_dict)
+        elif listing['status'] == 2:
+            sold_listings.append(listing_dict)
+
+    conn.close()
+    return render_template('seller_listings.html', active_listings=active_listings, inactive_listings=inactive_listings, sold_listings=sold_listings)
+
+@app.route('/create_listing.html', methods=['POST', 'GET'])
+def create_listing():
+    error = None
+    email = session.get('email')
+    conn = sqlite3.connect("NittanyAuctionDB")
+    cursor = conn.cursor()
+    cursor.execute("SELECT category_name FROM Categories ORDER BY category_name")
+    categories = cursor.fetchall()
+
+    if request.method == 'POST':
+        auction_title = str(request.form['auction_title']).strip()
+        product_name = str(request.form['product_name']).strip()
+        product_description = str(request.form['product_description']).strip()
+        category = str(request.form['category']).strip()
+        quantity = str(request.form['quantity']).strip()
+        reserve_price = str(request.form['reserve_price']).strip()
+        max_bids = str(request.form['max_bids']).strip()
+
+        if auction_title == "":
+            error = "Auction Title field is empty! Type in an Auction Title!"
+        elif product_name == "":
+            error = "Product Name field is empty! Type in a Product Name!"
+        elif category == "":
+            error = "Please select a Category!"
+        elif quantity == "" or quantity.isdigit() == False or int(quantity) <= 0:
+            error = "Quantity must be a positive whole number!"
+        elif max_bids == "" or max_bids.isdigit() == False or int(max_bids) <= 0:
+            error = "Max Bids must be a positive whole number!"
+        else:
+            try:
+                reserve_price_float = float(reserve_price)
+                if reserve_price_float < 0:
+                    error = "Reserve Price cannot be negative!"
+            except ValueError:
+                error = "Reserve Price must be a valid number!"
+
+        if error == None:
+            cursor.execute("SELECT MAX(listing_ID) FROM Auction_Listings")
+            current_max_listing_id = cursor.fetchone()[0]
+            if current_max_listing_id == None:
+                new_listing_id = 1
+            else:
+                new_listing_id = int(current_max_listing_id) + 1
+
+            cursor.execute("INSERT INTO Auction_Listings(seller_email, listing_ID, category, auction_title, product_name, product_description, quantity, reserve_price, max_bids, status) VALUES (?,?,?,?,?,?,?,?,?,?)", (email, new_listing_id, category, auction_title, product_name, product_description, int(quantity), str(reserve_price), int(max_bids), 1))
+            conn.commit()
+            conn.close()
+            return redirect(url_for('seller_listings'))
+
+    conn.close()
+    return render_template('create_listing.html', error=error, categories=categories)
+
+@app.route('/edit_listing.html', methods=['POST', 'GET'])
+def edit_listing():
+    error = None
+    email = session.get('email')
+    listing_ID = request.args.get('listing_ID')
+    if request.method == 'POST':
+        listing_ID = request.form['listing_ID']
+
+    if listing_ID == None:
+        return redirect(url_for('seller_listings'))
+
+    conn = sqlite3.connect("NittanyAuctionDB")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM Auction_Listings WHERE listing_ID = ? AND seller_email = ?", (listing_ID, email))
+    listing = cursor.fetchone()
+    if listing == None:
+        conn.close()
+        return redirect(url_for('seller_listings'))
+
+    bid_count = get_bid_count(listing_ID)
+    if int(listing['status']) == 2:
+        error = "Sold listings cannot be edited!"
+    elif int(listing['status']) == 1 and bid_count > 0:
+        error = "This active listing already has bids on it, so it cannot be edited!"
+
+    cursor.execute("SELECT category_name FROM Categories ORDER BY category_name")
+    categories = cursor.fetchall()
+
+    if request.method == 'POST' and error == None:
+        auction_title = str(request.form['auction_title']).strip()
+        product_name = str(request.form['product_name']).strip()
+        product_description = str(request.form['product_description']).strip()
+        category = str(request.form['category']).strip()
+        quantity = str(request.form['quantity']).strip()
+        reserve_price = str(request.form['reserve_price']).strip()
+        max_bids = str(request.form['max_bids']).strip()
+
+        if auction_title == "":
+            error = "Auction Title field is empty! Type in an Auction Title!"
+        elif product_name == "":
+            error = "Product Name field is empty! Type in a Product Name!"
+        elif category == "":
+            error = "Please select a Category!"
+        elif quantity == "" or quantity.isdigit() == False or int(quantity) <= 0:
+            error = "Quantity must be a positive whole number!"
+        elif max_bids == "" or max_bids.isdigit() == False or int(max_bids) <= 0:
+            error = "Max Bids must be a positive whole number!"
+        else:
+            try:
+                reserve_price_float = float(reserve_price)
+                if reserve_price_float < 0:
+                    error = "Reserve Price cannot be negative!"
+            except ValueError:
+                error = "Reserve Price must be a valid number!"
+
+        if error == None:
+            cursor.execute("UPDATE Auction_Listings SET category = ?, auction_title = ?, product_name = ?, product_description = ?, quantity = ?, reserve_price = ?, max_bids = ? WHERE listing_ID = ? AND seller_email = ?", (category, auction_title, product_name, product_description, int(quantity), str(reserve_price), int(max_bids), int(listing_ID), email))
+            conn.commit()
+            conn.close()
+            return redirect(url_for('seller_listings'))
+
+    listing = dict(listing)
+    listing['bid_count'] = bid_count
+    listing['remaining_bids'] = int(listing['max_bids']) - int(bid_count)
+    conn.close()
+    return render_template('edit_listing.html', error=error, listing=listing, categories=categories)
+
+@app.route('/remove_listing.html', methods=['POST', 'GET'])
+def remove_listing():
+    error = None
+    email = session.get('email')
+    listing_ID = request.args.get('listing_ID')
+    if request.method == 'POST':
+        listing_ID = request.form['listing_ID']
+
+    if listing_ID == None:
+        return redirect(url_for('seller_listings'))
+
+    conn = sqlite3.connect("NittanyAuctionDB")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM Auction_Listings WHERE listing_ID = ? AND seller_email = ?", (listing_ID, email))
+    listing = cursor.fetchone()
+    if listing == None:
+        conn.close()
+        return redirect(url_for('seller_listings'))
+
+    bid_count = get_bid_count(listing_ID)
+    remaining_bids = int(listing['max_bids']) - int(bid_count)
+
+    if int(listing['status']) != 1:
+        error = "Only active listings can be removed from the market!"
+
+    if request.method == 'POST' and error == None:
+        removal_reason = str(request.form['removal_reason']).strip()
+        if removal_reason == "":
+            error = "Removal Reason field is empty! Type in a reason for removing the listing!"
+        else:
+            cursor.execute("UPDATE Auction_Listings SET status = ? WHERE listing_ID = ? AND seller_email = ?", (0, int(listing_ID), email))
+            cursor.execute("INSERT OR REPLACE INTO Listing_Removals(listing_ID, seller_email, removal_reason, remaining_bids, removal_date) VALUES (?,?,?,?,datetime('now'))", (int(listing_ID), email, removal_reason, remaining_bids))
+            conn.commit()
+            conn.close()
+            return redirect(url_for('seller_listings'))
+
+    listing = dict(listing)
+    listing['bid_count'] = bid_count
+    listing['remaining_bids'] = remaining_bids
+    conn.close()
+    return render_template('remove_listing.html', error=error, listing=listing)
+
 @app.route('/helpdesk.html')
 def helpdesk():
     '''This function displays the helpdesk
@@ -1550,7 +1754,7 @@ def product_listings():
     products= cursor.fetchall()
     conn.close()
 
-product_images = {
+    product_images = {
         "Sephora Rouge Gel Lip Liner": "https://www.sephora.com/productimages/sku/s2871036-main-zoom.jpg?imwidth=1224",
         'Wilson Basketball 9"': "https://dks.scene7.com/is/image/GolfGalaxy/25WILUNCRHYTHMBSKBKB_Brown?qlt=70&wid=1100&hei=1100&fmt=webp&op_sharpen=1&fit=constrain",
         "Mainstays Linen Bathrobe": "https://www.roughlinen.com/cdn/shop/products/LINENROBEZION_1_2000x.jpg?v=1767661845",
