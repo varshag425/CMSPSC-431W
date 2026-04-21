@@ -693,7 +693,7 @@ def bidder():
     return render_template('bidder.html', email=email, first_name=first_name, last_name=last_name)
 
 
-@app.route('/bidder_settings.html')
+@app.route('/bidder_settings.html',methods=['GET','POST'])
 def bidder_settings():
     '''This function displays the bidder
        settings webpage and handles the
@@ -713,6 +713,13 @@ def bidder_settings():
     lastname = user[2]
     age = user[3]
     major = user[5]
+    if request.method=='POST':
+        cursor.execute("SELECT MAX(request_id) FROM REQUESTS")
+        maxid=cursor.fetchone()
+        request_id = maxid[0] + 1
+        cursor.execute("INSERT INTO Requests VALUES (?,?,?,?,?,?)",(request_id,email,'helpdeskteam@lsu.edu','ChangeRole','Please change role from bidder to seller.',0))
+        conn.commit()
+    conn.close()
     return render_template('bidder_settings.html', email=email, firstname=firstname, lastname=lastname, age=age, major=major)
 
 @app.route('/seller.html')
@@ -2057,8 +2064,7 @@ def helpdeskbidder():
             if maxid is None:
                 new_request_id = 100
             else: new_request_id = maxid+1
-            cursor.execute("INSERT INTO Requests (request_id, sender_email,helpdesk_staff_email, request_type, request_description, request_status) VALUES (?,?,'helpdeskteam@lsu.edu',?,?,0)",
-                           (new_request_id, email,request_type,request_description))
+            cursor.execute("INSERT INTO Requests (request_id, sender_email,helpdesk_staff_email, request_type, request_description, request_status) VALUES (?,?,'helpdeskteam@lsu.edu',?,?,0)",(new_request_id, email,request_type,request_description))
             conn.commit()
 
     cursor.execute("SELECT * FROM Requests WHERE sender_email = ? AND request_status = 1", (email,))
