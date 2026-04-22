@@ -29,6 +29,7 @@ def database_setup():
     zipcode_setup()
     listing_removals_setup()
     listing_images_setup()
+    favorites_setup()
 
 def user_setup():
     ''' This function sets up the Users
@@ -490,6 +491,19 @@ def get_bid_count(listing_ID):
     bid_count = cursor.fetchone()[0]
     conn.close()
     return bid_count
+
+def favorites_setup():
+    conn = sqlite3.connect("NittanyAuctionDB")
+    cursor = conn.cursor()
+    cursor.execute('''CREATE TABLE IF NOT EXISTS Favorites(
+        bidder_email VARCHAR(50),
+        listing_ID INTEGER,
+        PRIMARY KEY (bidder_email, listing_ID),
+        FOREIGN KEY (bidder_email) REFERENCES Bidders(email),
+        FOREIGN KEY (listing_ID) REFERENCES Auction_Listings(listing_ID)
+    )''')
+    conn.commit()
+    conn.close()
 
 database_setup() # Call the database_setup function to setup the database before launching NittanyAuction
 app = Flask(__name__)
@@ -2137,29 +2151,23 @@ def product_detail(Listing_ID):
     cursor.execute("SELECT * FROM Auction_Listings WHERE listing_ID = ?", (Listing_ID,))
     listing = cursor.fetchone()
 
-    if listing is None:
-        conn.close()
-        return "Listing not found", 404
-
-    cursor.execute(
-        "SELECT * FROM Bids WHERE listing_ID = ? ORDER BY bid_price DESC",
-        (Listing_ID,)
-    )
+    cursor.execute("SELECT * FROM Bids WHERE listing_ID = ? ORDER BY bid_price DESC", (Listing_ID,))
     bids = cursor.fetchall()
 
     current_bid = bids[0]['bid_price'] if bids else None
 
-    cursor.execute(
-        "SELECT AVG(rating), COUNT(*) FROM Ratings WHERE seller_email = ?",
-        (listing['seller_email'],)
-    )
+    cursor.execute("SELECT AVG(rating), COUNT(*) FROM Ratings WHERE seller_email = ?", (listing['seller_email'],))
     rating_row = cursor.fetchone()
 
-    cursor.execute(
-        "SELECT * FROM Ratings WHERE seller_email = ? ORDER BY rating_date DESC",
-        (listing['seller_email'],)
-    )
+    cursor.execute("SELECT * FROM Ratings WHERE seller_email = ? ORDER BY rating_date DESC", (listing['seller_email'],))
     reviews = cursor.fetchall()
+
+    email = session.get('email')
+    is_favorited = False
+    if email:
+        cursor.execute("SELECT * FROM Favorites WHERE bidder_email = ? AND listing_ID = ?", (email, Listing_ID))
+        is_favorited = cursor.fetchone() is not None
+
 
     product_images = {
         "Sephora Rouge Gel Lip Liner": "https://www.sephora.com/productimages/sku/s2871036-main-zoom.jpg?imwidth=1224",
@@ -2225,39 +2233,24 @@ def product_detail(Listing_ID):
         "GG Yoga Socks": "https://m.media-amazon.com/images/I/81RNX14aqkL._AC_SX679_.jpg",
     }
 
-    placeholder_image = "https://via.placeholder.com/400x300?text=No+Image"
-
-    # check database image first
-    cursor.execute(
-        "SELECT image_url FROM Listing_Images WHERE listing_ID = ?",
-        (Listing_ID,)
-    )
-    image_row = cursor.fetchone()
-
-    # Use DB image first, otherwise fallback dictionary image
-    if image_row is not None and image_row['image_url'] != "":
-        image_url = image_row['image_url']
-    else:
-        image_url = product_images.get(
-            listing['product_name'],
-            placeholder_image
-        )
+    image_url = product_images.get(listing['Product_Name'], None)
 
     conn.close()
 
-    return render_template(
-        'product_detail.html',
-        listing=listing,
-        bids=bids,
-        current_bid=current_bid,
-        avg_rating=rating_row[0],
-        rating_count=rating_row[1],
-        seller_email=listing['seller_email'],
-        reviews=reviews,
-        image_url=image_url,
-        error=None,
-        success=None
-    )
+    return render_template('product_detail.html',
+                           listing=listing,
+                           bids=bids,
+                           current_bid=current_bid,
+                           avg_rating=rating_row[0],  # template uses avg_rating, not seller_rating
+                           rating_count=rating_row[1],
+                           seller_email=listing['seller_email'],  # template uses seller_email directly
+                           reviews=reviews,  # template needs reviews list
+                           image_url=image_url,
+                           is_favorited=is_favorited,
+                           error=None,
+                           success=None
+                           )
+
 
 @app.route('/helpdeskbidder.html', methods=['GET','POST'])
 def helpdeskbidder():
@@ -2287,6 +2280,104 @@ def helpdeskbidder():
 
     conn.close()
     return render_template('helpdeskbidder.html', email=email,active_requests=active_requests,complete_requests=complete_requests)
+
+@app.route('/toggle_favorite/<int:listing_ID>', methods=['POST'])
+def toggle_favorite(listing_ID):
+    email = session.get('email')
+    if not email:
+        return redirect(url_for('login'))
+    conn = sqlite3.connect("NittanyAuctionDB")
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM Favorites WHERE bidder_email = ? AND listing_ID = ?", (email, listing_ID))
+    existing = cursor.fetchone()
+    if existing:
+        cursor.execute("DELETE FROM Favorites WHERE bidder_email = ? AND listing_ID = ?",(email, listing_ID))
+    else:
+        cursor.execute("INSERT INTO Favorites(bidder_email, listing_ID) VALUES (?,?)",(email, listing_ID))
+    conn.commit()
+    conn.close()
+    return redirect(request.referrer or url_for('product_listings'))
+
+@app.route('/favorites.html')
+def favorites():
+    email = session.get('email')
+    if not email:
+        return redirect(url_for('login'))
+    conn = sqlite3.connect("NittanyAuctionDB")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("""SELECT A.listing_ID, A.product_name, A.category, A.reserve_price
+                     FROM Auction_Listings A
+                     JOIN Favorites F ON A.listing_ID = F.listing_ID
+                     WHERE F.bidder_email = ? AND A.status = 1""", (email,))
+    favorites = cursor.fetchall()
+    conn.close()
+
+    product_images = {
+        "Sephora Rouge Gel Lip Liner": "https://www.sephora.com/productimages/sku/s2871036-main-zoom.jpg?imwidth=1224",
+        'Wilson Basketball 9"': "https://dks.scene7.com/is/image/GolfGalaxy/25WILUNCRHYTHMBSKBKB_Brown?qlt=70&wid=1100&hei=1100&fmt=webp&op_sharpen=1&fit=constrain",
+        "Mainstays Linen Bathrobe": "https://www.roughlinen.com/cdn/shop/products/LINENROBEZION_1_2000x.jpg?v=1767661845",
+        "Mainstays Satin Bathrobe": "https://i5.walmartimages.com/seo/Ekouaer-Women-s-Satin-Robe-Valentines-Lingerie-for-Women-Kimono-Bathrobe-3-4-Sleeve-Ruffle-Belted-Robes-Bridesmaids-Champagne-Color-S_7dfc780b-eb9b-4c95-8076-4390d682dfab.c8e69b046cf6305c9375199d3b976a57.jpeg?odnHeight=573&odnWidth=573&odnBg=FFFFFF",
+        "Mainstays Waffled Bathrobe": "https://m.media-amazon.com/images/I/71QaiOluK0L._AC_SY879_.jpg",
+        "Rare Beauty Liquid Touch Brush": "https://www.sephora.com/productimages/sku/s2362408-main-zoom.jpg?imwidth=1224",
+        "Lotus SuperProtector Sunscreen": "https://www.lotus.in/cdn/shop/products/SPF70_Frontcopy2.jpg?v=1688806548&width=1400",
+        "Loreal Foundation Supreme": "https://i5.walmartimages.com/seo/L-Oreal-Paris-Infallible-Pro-Matte-Blendable-Foundation-Oil-Free-102-Shell-Beige-1-fl-oz_9e3287a3-a6a5-46e7-8aae-31ba52894b37.9e73b3f20229de094885f486a72ed193.jpeg?odnHeight=573&odnWidth=573&odnBg=FFFFFF",
+        "Ribeye": "https://assets2.kansascitysteaks.com/dyn-images/pdp_hero/1080_USDA_Prime_Bone-20d33f5d7c7b2dbaf946f3dd90995133.jpg",
+        "Steak Rolls": "https://www.daringgourmet.com/wp-content/uploads/2014/05/Steak-Rolls-4.jpg",
+        "Wilde Black Ribbed Long Sleeve Mock Neck Bodysuit": "https://images.express.com/is/image/expressfashion/0086_09610902_0058_a001?cache=on&wid=480&fmt=jpeg&qlt=85,1&resmode=sharp2&op_usm=1,1,5,0&defaultImage=Photo-Coming-Soon",
+        "MM OC Dry Cat Food": "https://i5.walmartimages.com/seo/Meow-Mix-Original-Choice-Dry-Cat-Food-3-15-Pound-Bag_4f4e12bb-b3e9-482f-ab11-f04108998b23.7f813b8f3f6522b8fa01037cbce91784.jpeg?odnHeight=573&odnWidth=573&odnBg=FFFFFF",
+        "13 Pro Max": "https://m.media-amazon.com/images/I/61ERgud-SbL._AC_SX679_.jpg",
+        "S22": "https://m.media-amazon.com/images/I/81OIgOznJIL._AC_SX679_.jpg",
+        "S23": "https://m.media-amazon.com/images/I/61yUiD1CVML._AC_SX679_.jpg",
+        "Selby Mini Skirt": "https://us.princesspolly.com/cdn/shop/products/2-modelinfo-izy-US2_15368558-1402-4446-a5cf-da68af27576e.jpg?v=1679633327&width=1800",
+        "Skeleton Hand Print Oversized tee": "https://di2ponv0v5otw.cloudfront.net/posts/2025/08/02/688e4a0a9b2158f1ba0d9302/l_688e4a1388849a732a874c9f.jpg",
+        "Ankle-length Leather Pants": "https://m.media-amazon.com/images/I/51r96OlCtlL._AC_SY879_.jpg",
+        "H&M Jersey Top": "https://image.hm.com/assets/hm/ee/05/ee0549d1fcba079ae1939e52dfd4023135ac4074.jpg?imwidth=2160",
+        "Skinny High Jeans": "https://lscoglobal.scene7.com/is/image/lscoglobal/WB_18882-0594_GLO_CM_D1?fmt=webp&qlt=70&resMode=sharp2&fit=crop,1&op_usm=0.6,0.6,8&wid=309&hei=309",
+        "Mac Nut Cookies": "https://sallysbakingaddiction.com/wp-content/uploads/2012/09/white-chocolate-macadamia-nut-cookies-1.jpg",
+        "Mr.Mixing bowl": "https://images.squarespace-cdn.com/content/v1/5f63ff3dce6e39523e4b6b80/a59cb1ae-9de6-46aa-8886-497a256273fe/8+Quart+Bowl+Right+Branded.png",
+        "Double boiler insert_for_all": "https://m.media-amazon.com/images/I/51ouyTiwLfL._AC_SX679_.jpg",
+        "BB TSP Wet Cat Food": "https://i5.walmartimages.com/seo/Blue-Buffalo-Tastefuls-Natural-Wet-Cat-Food-Adult-Chicken-Pat-5-5-oz-Can_e32eccbf-4d76-4d35-bd1e-321fd966155e.9c5188ab155574bf701cdbeee182ec02.jpeg?odnHeight=573&odnWidth=573&odnBg=FFFFFF",
+        "GW Electric Scooter": "https://i5.walmartimages.com/asr/942a38b1-5c2f-4cf8-bae6-2de1d2eaf661.e45f321513195d45bc0ae97faed7ff53.jpeg?odnHeight=573&odnWidth=573&odnBg=FFFFFF",
+        "AW SE": "https://t-mobile.scene7.com/is/image/Tmusprod/Apple-Watch-SE-3-40mm-Midnight-Aluminum-Case-Midnight-Sport-Band-frontimage",
+        "AW S6": "https://m.media-amazon.com/images/I/71uN94CB+jL._AC_SX679_.jpg",
+        "AW S7": "https://m.media-amazon.com/images/I/61SJZzxSSAL._AC_SX679_.jpg",
+        "AirPods pro": "https://m.media-amazon.com/images/I/71zny7BTRlL._AC_SX679_.jpg",
+        "AirPods max": "https://m.media-amazon.com/images/I/71tOG91oC6L._AC_SX679_.jpg",
+        "Samsung Tizen": "https://encrypted-tbn3.gstatic.com/shopping?q=tbn:ANd9GcT-dz4LEV_cC7fXuBtvMv3s7puPw2xC2tbySX2-ckOSz0qYh65qrNEk4-SeOil6uxVSFooHEfIY-tbx0nA32oE3ApH_RDtg-zhBKwLGJWI",
+        "Insignia Fire": "https://m.media-amazon.com/images/I/41ZcMd+O1YL._AC_.jpg",
+        "LG Nanocell": "https://www.lg.com/eastafrica/images/tvs/md07596252/D-02.jpg",
+        "CB Punching Bag and Gloves": "https://i5.walmartimages.com/asr/e292a227-4837-47af-bed8-124880055b17.7c5c5a799f2f3d34f49b97fc4580dc63.jpeg?odnHeight=573&odnWidth=573&odnBg=FFFFFF",
+        "Diced Ham": "https://www.gfsstore.com/wp-content/uploads/2022/10/199834-RAW-6-768x768.jpg",
+        "Luden's Throat Drops": "https://www.cvs.com/bizcontent/merchandising/productimages/high_res/81483201062.jpg?im=Resize=(160,160),aspect=ignore",
+        "Ikea WC - Haggeby White": "https://www.ikea.com/us/en/images/products/sektion-high-cabinet-with-shelves-2-doors-white-veddinge-white__0299204_pe508280_s5.jpg?f=xl",
+        "Lily Plant": "https://mynortherngarden.com/wp-content/uploads/2021/04/orange-lily-in-pot.jpg",
+        "KK BC Wooden Playhouse": "https://m.media-amazon.com/images/I/81nqefxL-xL._AC_SX679_.jpg",
+        "Ikea WC - White": "https://www.ikea.com/us/en/images/products/sektion-high-cabinet-with-shelves-2-doors-white-vallstena-white__1172992_pe893679_s5.jpg?f=xl",
+        "Black quartz Sink": "https://images.thdstatic.com/productImages/59ebbfb2-58fe-41cc-bc40-6f182bee388c/svn/black-karran-undermount-kitchen-sinks-qu-670-bl-e1_100.jpg",
+        "White Apron Sink": "https://images.thdstatic.com/productImages/b5e03f27-624f-4464-bafb-5caae7e1178c/svn/white-kohler-farmhouse-kitchen-sinks-k-5827-0-64_100.jpg",
+        "Top Mount Sink": "https://s3.img-b.com/image/private/t_base,c_lpad,f_auto,dpr_auto,w_70,h_70/product/kohler/kohler-k-5846-4-0-3980066.jpg",
+        "KF with HS": "https://m.media-amazon.com/images/I/51+C7E4MjHL._AC_SX679_.jpg",
+        "DCKF": "https://images.signaturehardware.com/i/signaturehdwr/455764-hurston-faucet-cp-front.jpg?w=1425&fmt=auto",
+        "KF with Sensor": "https://s3.img-b.com/image/private/t_base,c_lpad,f_auto,dpr_auto,w_70,h_70/product/kraus/kraus-ktf-3104ch-578883.jpg",
+        "Ikea WC - 2 doors": "https://www.ikea.com/us/en/images/products/sektion-wall-cabinet-with-2-doors-white-vallstena-white__1173078_pe893762_s5.jpg?f=xl",
+        "Gap Jersey Top": "https://www.gap.com/webcontent/0061/462/510/cn61462510.jpg",
+        "Snow Crab": "https://seabear.com/cdn/shop/files/SnowCrab1x1.webp?v=1762988194&width=800",
+        "Deep Seat Cushion": "https://m.media-amazon.com/images/I/81sfkPgZ51L._AC_SX679_.jpg",
+        "Tylenol Gel": "https://target.scene7.com/is/image/Target/GUEST_1cda7c4c-4d06-4f25-b8da-0efddf393c48?wid=750&qlt=80",
+        "Chinese Lanterns": "https://www.paperlanternstore.com/cdn/shop/products/36TCL-RD-chinese-paper-lantern.jpg?v=1614219474",
+        "Tuscany Ridge Conversation Set": "https://assets.wfcdn.com/im/412663/resize-h1200-p1-w1200%5Ecompr-r85/3823/382380651/Argyri+9+-+Person+Outdoor+Wicker+Patio+Conversation+Furniture+Set+with+Optional+Fire+Pit+Table-87292006-87054263.jpg",
+        "BF SA Whey": "https://encrypted-tbn1.gstatic.com/shopping?q=tbn:ANd9GcRiImhW1yCz5inlk7yBkmkWMQJbM_XxXnmhu5t2k9gk59U-Ml3EHtZiEB7V5VU4TCpJZ4S-Y4Kee36wVdbQut8kh_0ZEO3taTuJgphE-cETIyraoEnwCw1qrm5OGcHTg98SM9xJY3U&usqp=CAc",
+        "BB FC Dry Dog Food": "https://encrypted-tbn2.gstatic.com/shopping?q=tbn:ANd9GcTa2RlwFsjMKC_HIiaYOy4I8xjmxGUo9mfhVGMgcGiVCbPDLgllt2KKpJs-aF-xoXO83IhN8vaxJ3voPOxhVyBZrZtuYFzjXbMvfTQOeGxvUfNz-O9mMBId1rR8R7sIzjgaFkaq-ts&usqp=CAc",
+        "Sweet Potato Pie": "https://i5.walmartimages.com/seo/Patti-LaBelle-8-inch-Sweet-Potato-Pie-21-oz-1-count_6aab41a4-16c9-4e6f-9ef1-284795c44f6b.3bb6a1eb01502d98858309c23c882a64.jpeg?odnHeight=573&odnWidth=573&odnBg=FFFFFF",
+        "Horizon: FW": "https://m.media-amazon.com/images/I/81JulKoOyLL._SX522_.jpg",
+        "MJ Mega El Toro": "https://m.media-amazon.com/images/I/917IGsFpltL._AC_SX679_.jpg",
+        "ER: MMO": "https://m.media-amazon.com/images/I/71GPiuyNtkL._AC_CR0%2C0%2C0%2C0_SX960_SY720_.jpg",
+        "SV ES Melatonin": "https://i5.walmartimages.com/seo/Spring-Valley-Extra-Strength-Melatonin-Tablets-Dietary-Supplement-Value-Size-10-mg-240-Count_192a6111-e5bc-4d6d-bce8-aea574f86f5d.5c142b8bc0135d8b5ebce8b836915607.jpeg?odnHeight=573&odnWidth=573&odnBg=FFFFFF",
+        "GG Yoga Socks": "https://m.media-amazon.com/images/I/81RNX14aqkL._AC_SX679_.jpg",
+    }
+
+    return render_template('favorites.html', favorites=favorites, product_images=product_images)
 
 if __name__ == '__main__':
     app.run()
