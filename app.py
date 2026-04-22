@@ -32,6 +32,7 @@ def database_setup():
     listing_removals_setup()
     listing_images_setup()
     favorites_setup()
+    notifications_setup()
 
 def user_setup():
     ''' This function sets up the Users
@@ -516,6 +517,28 @@ app = Flask(__name__)
 app.config["SESSION_PERMANENT"] = False     # Sessions expire when browser closes
 app.config["SESSION_TYPE"] = "filesystem"     # Store session data on the filesystem
 Session(app)
+
+def notifications_setup():
+    '''This function sets up the Notifications
+       table to store auction result messages
+       for bidders.
+    '''
+    conn = sqlite3.connect("NittanyAuctionDB")
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS Notifications (
+            notification_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_email      TEXT NOT NULL,
+            listing_id      INTEGER NOT NULL,
+            message         TEXT NOT NULL,
+            is_read         INTEGER DEFAULT 0,
+            created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_email)  REFERENCES Users(email),
+            FOREIGN KEY (listing_id) REFERENCES Auction_Listings(listing_ID)
+        )
+    ''')
+    conn.commit()
+    conn.close()
 
 @app.route('/')
 def index():
@@ -1024,43 +1047,91 @@ def seller_listings():
 
     for listing in all_listings:
         bid_count = get_bid_count(listing['listing_ID'])
-
         if int(listing['status']) == 1 and bid_count >= int(listing['max_bids']):
-            cursor.execute(
-                "SELECT bid_price FROM Bids WHERE listing_ID = ? ORDER BY bid_price DESC LIMIT 1",
-                (listing['listing_ID'],)
-            )
-            highest_bid_row = cursor.fetchone()
+            cursor.execute("SELECT staus FROM Auction_Listings WHERE listing_ID = ?",(listing['listing_ID'],))
+            current_status = cursor.fetchone()['status']
 
+            if current_status == 1:  # only proceed if still active
+                cursor.execute(
+                    "SELECT bid_price FROM Bids WHERE listing_ID = ? ORDER BY bid_price DESC LIMIT 1",
+                    (listing['listing_ID'],)
+                )
+
+            highest_bid_row = cursor.fetchone()
             if highest_bid_row is not None:
                 highest_bid = float(highest_bid_row[0])
-
                 reserve_price_text = str(listing['reserve_price']).strip()
-                if reserve_price_text.startswith('$'):
-                    reserve_price = float(reserve_price_text[1:])
-                else:
-                    reserve_price = float(reserve_price_text)
+                reserve_price = float(reserve_price_text[1:] if reserve_price_text.startswith('$') else reserve_price_text)
 
                 if highest_bid >= reserve_price:
                     cursor.execute(
                         "UPDATE Auction_Listings SET status = 3 WHERE listing_ID = ?",
                         (listing['listing_ID'],)
                     )
+
+                    cursor.execute(
+                        "SELECT bidder_email FROM Bids WHERE listing_ID = ? ORDER BY bid_price DESC LIMIT 1",
+                        (listing['listing_ID'],)
+                    )
+                    winner_row = cursor.fetchone()
+
+                    cursor.execute(
+                        "SELECT DISTINCT bidder_email FROM Bids WHERE listing_ID = ? AND bidder_email != ?",
+                        (listing['listing_ID'], winner_row['bidder_email'])
+                    )
+                    loser_rows = cursor.fetchall()
+
+                    cursor.execute("""
+                        INSERT INTO Notifications (user_email, listing_id, message)
+                        VALUES (?, ?, ?)
+                    """, (
+                        winner_row['bidder_email'],
+                        listing['listing_ID'],
+                        f"Congratulations! You won the auction for '{listing['auction_title']}' "
+                        f"with a bid of ${highest_bid:.2f}."
+                    ))
+
+                    for loser in loser_rows:
+                        cursor.execute("""
+                            INSERT INTO Notifications (user_email, listing_id, message)
+                            VALUES (?, ?, ?)
+                        """, (
+                            loser['bidder_email'],
+                            listing['listing_ID'],
+                            f"The auction for '{listing['auction_title']}' has ended. "
+                            f"Unfortunately, you did not win."
+                        ))
+
                 else:
                     cursor.execute(
                         "UPDATE Auction_Listings SET status = 0 WHERE listing_ID = ?",
                         (listing['listing_ID'],)
                     )
 
+                    cursor.execute(
+                        "SELECT DISTINCT bidder_email FROM Bids WHERE listing_ID = ?",
+                        (listing['listing_ID'],)
+                    )
+                    all_bidders = cursor.fetchall()
+
+                    for bidder in all_bidders:
+                        cursor.execute("""
+                            INSERT INTO Notifications (user_email, listing_id, message)
+                            VALUES (?, ?, ?)
+                        """, (
+                            bidder['bidder_email'],
+                            listing['listing_ID'],
+                            f"The auction for '{listing['auction_title']}' has closed. "
+                            f"The reserve price was not met, so no sale occurred."
+                        ))
+
     conn.commit()
 
     cursor.execute("SELECT * FROM Auction_Listings WHERE seller_email = ? ORDER BY listing_ID DESC", (email,))
     all_listings = cursor.fetchall()
-
     active_listings = []
     inactive_listings = []
     sold_listings = []
-
     for listing in all_listings:
         listing_dict = dict(listing)
         listing_dict['bid_count'] = get_bid_count(listing['listing_ID'])
@@ -1071,9 +1142,9 @@ def seller_listings():
             inactive_listings.append(listing_dict)
         elif listing['status'] == 2 or listing['status'] == 3:
             sold_listings.append(listing_dict)
-
     conn.close()
-    return render_template('seller_listings.html', active_listings=active_listings, inactive_listings=inactive_listings, sold_listings=sold_listings)
+    return render_template('seller_listings.html', active_listings=active_listings,
+                           inactive_listings=inactive_listings, sold_listings=sold_listings)
 
 @app.route('/create_listing.html', methods=['POST', 'GET'])
 def create_listing():
