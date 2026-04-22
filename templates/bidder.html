@@ -30,7 +30,7 @@
         .welcome-bar strong { color: #d6ecff; }
 
         .section-title {
-            font-size: .75rem;
+            font-size: 1.7rem;
             letter-spacing: .1em;
             text-transform: uppercase;
             color: #5a8ab5;
@@ -43,16 +43,39 @@
             border: none;
             color: #fff;
             font-weight: 600;
-            font-size: .95rem;
+            font-size: 1.5rem;
             padding: .75rem 0;
             border-radius: 6px;
             text-decoration: none;
-            display: block;
+            display: flex;
+            text-align: center;
+            min-height: 150px;
+            width: 100%;
+            transition: background .2s;
+            justify-content:center;
+            align-items:center
+
+        }
+        .btn-blue:hover { background: #155a9e; color: #fff; }
+        .btn-grey {
+            background: grey;
+            border: none;
+            color: #fff;
+            font-weight: 600;
+            font-size: 1.3rem;
+            padding: .75rem 0;
+            border-radius: 6px;
+            text-decoration: none;
+            display: flex;
             text-align: center;
             width: 100%;
             transition: background .2s;
+            min-height:100px;
+            justify-content:center;
+            align-items:center
         }
-        .btn-blue:hover { background: #155a9e; color: #fff; }
+        .btn-grey:hover { background: darkgrey; color: #fff; }
+
     </style>
 </head>
 <body>
@@ -83,8 +106,8 @@
         <div class="col-md-4">
             <a href="/" class="btn-blue">Sign Out</a>
         </div>
-        <div class="col-md-4">
-            <a href="/helpdeskbidder.html" class="btn-blue">HelpDesk Support</a>
+        <div class="col-md-12">
+            <a href="/helpdeskbidder.html" class="btn-grey">HelpDesk Support</a>
         </div>
     </div>
 

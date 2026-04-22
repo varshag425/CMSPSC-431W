@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Seller Rating</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+        body { background: #eef4fb; font-family: 'Playfair Display', sans-serif; }
+
+        .top-nav {
+            background: #1a6fc4;
+            padding: .65rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .top-nav .brand { color: #fff; font-size: 1.4rem; font-weight: 600; text-decoration: none; }
+        .top-nav .brand span { color: #cce4ff; }
+        .top-nav a.signout { color: #cce4ff; font-size: .85rem; text-decoration: none; }
+        .top-nav a.signout:hover { color: #fff; }
+
+
+button{
+            background: #1a6fc4;
+            border: none;
+            color: #fff;
+            font-weight: 600;
+            font-size: .95rem;
+            padding: .75rem 0;
+            border-radius: 6px;
+            text-decoration: none;
+            display: block;
+            text-align: center;
+            width: 100%;
+            transition: background .2s;
+            margin-top: 20px;
+            margin-bottom:20px;
+            max-width:150px;
+        }
+button:hover { background: #155a9e; class=color: #fff; }
+</style>
+</head>
+<body>
+<div class="top-nav">
+    <a class="brand" href="/">Nittany<span>Auction</span></a>
+    <a href="/" class="signout">Sign Out</a>
+</div>
+ <h2>Please rate the seller: {{ seller_email }}</h2>
+            <form method="POST">
+                <input type="radio" class="btn-check" name="rating" value="5" id="rating-5" autocomplete="off" checked>
+                <label class="btn" for="rating-5">5</label>
+                <input type="radio" class="btn-check" name="rating" value="4" id="rating-4" autocomplete="off">
+                <label class="btn" for="rating-4">4</label>
+                <input type="radio" class="btn-check" name="rating" value="3" id="rating-3" autocomplete="off">
+                <label class="btn" for="rating-3">3</label>
+                <input type="radio" class="btn-check" name="rating" value="2" id="rating-2" autocomplete="off">
+                <label class="btn" for="rating-2">2</label>
+                <input type="radio" class="btn-check" name="rating" value="1" id="rating-1" autocomplete="off">
+                <label class="btn" for="rating-1">1</label>
+                <input type="text" name="description" id="description" required>
+                <label class="btn" for="description">Rating Description:</label>
+                <button type="submit">Confirm Rating</button>
+            </form>
+</body>
+</html>

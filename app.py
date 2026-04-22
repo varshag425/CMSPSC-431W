@@ -1,3 +1,5 @@
+from datetime import date, datetime
+
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_session import Session
 import pandas as pd
@@ -2233,7 +2235,7 @@ def product_detail(Listing_ID):
                     if bid_count >= int(listing['max_bids']):
                         highest_bid = bids[0]['bid_price']
                         highest_bidder = bids[0]['bidder_email']
-                        reserve_price = float(listing['reserve_price'])
+                        reserve_price = float(listing['reserve_price'][1:])#$ cant be converted to float
 
                         if highest_bid >= reserve_price:
                             cursor.execute(
@@ -2411,7 +2413,7 @@ def payment_page(Listing_ID):
 
             conn.commit()
             conn.close()
-            return redirect(url_for('product_detail', Listing_ID=Listing_ID))
+            return redirect(url_for('seller_rating', Listing_ID=Listing_ID))
 
     conn.close()
     return render_template(
@@ -2422,6 +2424,25 @@ def payment_page(Listing_ID):
         cards=cards,
         error=error
     )
+@app.route('/seller_rating/<int:Listing_ID>.html', methods=['GET','POST'])
+def seller_rating(Listing_ID):
+    email = session.get('email')
+    session['role'] = 'bidder'
+    session['webpage'] = 'seller_rating'
+    conn=sqlite3.connect("NittanyAuctionDB")
+    cursor=conn.cursor()
+    cursor.execute("SELECT seller_email FROM Auction_Listings WHERE listing_ID=?",(Listing_ID,))
+    seller_email = cursor.fetchone()[0]
+    date = datetime.now().strftime("%m/%d/%y")
+    if request.method == 'POST':
+        rating = request.form.get('rating')
+        rating_description=request.form.get('description')
+        cursor.execute("INSERT INTO Ratings VALUES(?,?,?,?,?)",(email,seller_email,date, int(rating),rating_description))
+        conn.commit()
+        return redirect(url_for('product_detail', Listing_ID=Listing_ID))
+    conn.close()
+    return render_template('seller_rating.html', Listing_ID=Listing_ID, seller_email=seller_email)
+
 
 @app.route('/helpdeskbidder.html', methods=['GET','POST'])
 def helpdeskbidder():
