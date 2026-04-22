@@ -28,6 +28,7 @@ def database_setup():
     transaction_setup()
     zipcode_setup()
     listing_removals_setup()
+    listing_images_setup()
 
 def user_setup():
     ''' This function sets up the Users
@@ -464,6 +465,32 @@ def listing_removals_setup():
     conn.commit()
     return cursor.fetchall()
 
+def listing_images_setup():
+    '''This function sets up the listing images table.'''
+    conn = sqlite3.connect("NittanyAuctionDB")
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS Listing_Images(
+            listing_ID INTEGER,
+            image_url VARCHAR(500),
+            PRIMARY KEY(listing_ID),
+            FOREIGN KEY (listing_ID) REFERENCES Auction_Listings(listing_ID)
+        )
+    ''')
+
+    conn.commit()
+    conn.close()
+
+def get_bid_count(listing_ID):
+    '''Returns the number of bids placed on a listing.'''
+    conn = sqlite3.connect("NittanyAuctionDB")
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM Bids WHERE listing_ID = ?", (listing_ID,))
+    bid_count = cursor.fetchone()[0]
+    conn.close()
+    return bid_count
+
 database_setup() # Call the database_setup function to setup the database before launching NittanyAuction
 app = Flask(__name__)
 ''' These next three lines setup the sessions
@@ -737,15 +764,18 @@ def seller():
     seller = cursor.fetchone()[0]
     cursor.execute("SELECT * FROM Local_Vendors WHERE email = ?", (user_email,))
     local_vendor = cursor.fetchone()
-    if local_vendor == None:
+
+    if local_vendor is None:
         session['role'] = 'seller'
     elif local_vendor[0] == seller:
         session['role'] = 'local_vendor'
-        cursor.execute("SELECT L.business_address_id FROM Local_Vendors L, Users U WHERE U.email = ? AND U.email = L.email",(user_email,))
+        cursor.execute("SELECT L.business_address_id FROM Local_Vendors L, Users U WHERE U.email = ? AND U.email = L.email", (user_email,))
         business_address = str(cursor.fetchone()[0])
         session['address_id'] = business_address
 
-    return render_template('seller.html', email=user_email)
+    role = session.get('role')
+    conn.close()
+    return render_template('seller.html', email=user_email, role=role)
 
 @app.route('/seller_settings.html', methods=["GET", "POST"])
 def seller_settings():
@@ -1022,6 +1052,7 @@ def create_listing():
     email = session.get('email')
     conn = sqlite3.connect("NittanyAuctionDB")
     cursor = conn.cursor()
+
     cursor.execute("SELECT category_name FROM Categories ORDER BY category_name")
     categories = cursor.fetchall()
 
@@ -1033,6 +1064,7 @@ def create_listing():
         quantity = str(request.form['quantity']).strip()
         reserve_price = str(request.form['reserve_price']).strip()
         max_bids = str(request.form['max_bids']).strip()
+        image_url = str(request.form.get('image_url', '')).strip()
 
         if auction_title == "":
             error = "Auction Title field is empty! Type in an Auction Title!"
@@ -1055,12 +1087,34 @@ def create_listing():
         if error == None:
             cursor.execute("SELECT MAX(listing_ID) FROM Auction_Listings")
             current_max_listing_id = cursor.fetchone()[0]
+
             if current_max_listing_id == None:
                 new_listing_id = 1
             else:
                 new_listing_id = int(current_max_listing_id) + 1
 
-            cursor.execute("INSERT INTO Auction_Listings(seller_email, listing_ID, category, auction_title, product_name, product_description, quantity, reserve_price, max_bids, status) VALUES (?,?,?,?,?,?,?,?,?,?)", (email, new_listing_id, category, auction_title, product_name, product_description, int(quantity), str(reserve_price), int(max_bids), 1))
+            cursor.execute(
+                "INSERT INTO Auction_Listings(seller_email, listing_ID, category, auction_title, product_name, product_description, quantity, reserve_price, max_bids, status) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                (
+                    email,
+                    new_listing_id,
+                    category,
+                    auction_title,
+                    product_name,
+                    product_description,
+                    int(quantity),
+                    str(reserve_price),
+                    int(max_bids),
+                    1
+                )
+            )
+
+            if image_url != "":
+                cursor.execute(
+                    "INSERT OR REPLACE INTO Listing_Images(listing_ID, image_url) VALUES (?, ?)",
+                    (new_listing_id, image_url)
+                )
+
             conn.commit()
             conn.close()
             return redirect(url_for('seller_listings'))
@@ -1109,7 +1163,11 @@ def edit_listing():
     conn = sqlite3.connect("NittanyAuctionDB")
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM Auction_Listings WHERE listing_ID = ? AND seller_email = ?", (listing_ID, email))
+
+    cursor.execute(
+        "SELECT * FROM Auction_Listings WHERE listing_ID = ? AND seller_email = ?",
+        (listing_ID, email)
+    )
     listing = cursor.fetchone()
     if listing == None:
         conn.close()
@@ -1132,6 +1190,7 @@ def edit_listing():
         quantity = str(request.form['quantity']).strip()
         reserve_price = str(request.form['reserve_price']).strip()
         max_bids = str(request.form['max_bids']).strip()
+        image_url = str(request.form.get('image_url', '')).strip()
 
         if auction_title == "":
             error = "Auction Title field is empty! Type in an Auction Title!"
@@ -1152,14 +1211,44 @@ def edit_listing():
                 error = "Reserve Price must be a valid number!"
 
         if error == None:
-            cursor.execute("UPDATE Auction_Listings SET category = ?, auction_title = ?, product_name = ?, product_description = ?, quantity = ?, reserve_price = ?, max_bids = ? WHERE listing_ID = ? AND seller_email = ?", (category, auction_title, product_name, product_description, int(quantity), str(reserve_price), int(max_bids), int(listing_ID), email))
+            cursor.execute(
+                "UPDATE Auction_Listings SET category = ?, auction_title = ?, product_name = ?, product_description = ?, quantity = ?, reserve_price = ?, max_bids = ? WHERE listing_ID = ? AND seller_email = ?",
+                (
+                    category,
+                    auction_title,
+                    product_name,
+                    product_description,
+                    int(quantity),
+                    str(reserve_price),
+                    int(max_bids),
+                    int(listing_ID),
+                    email
+                )
+            )
+
+            if image_url != "":
+                cursor.execute(
+                    "INSERT OR REPLACE INTO Listing_Images(listing_ID, image_url) VALUES (?, ?)",
+                    (int(listing_ID), image_url)
+                )
+            else:
+                cursor.execute(
+                    "DELETE FROM Listing_Images WHERE listing_ID = ?",
+                    (int(listing_ID),)
+                )
+
             conn.commit()
             conn.close()
             return redirect(url_for('seller_listings'))
 
+    cursor.execute("SELECT image_url FROM Listing_Images WHERE listing_ID = ?", (listing_ID,))
+    image_row = cursor.fetchone()
+
     listing = dict(listing)
+    listing['image_url'] = image_row[0] if image_row else ""
     listing['bid_count'] = bid_count
     listing['remaining_bids'] = int(listing['max_bids']) - int(bid_count)
+
     conn.close()
     return render_template('edit_listing.html', error=error, listing=listing, categories=categories)
 
@@ -1814,27 +1903,24 @@ def remove_credit_card():
 
     return render_template('remove_credit_card.html', error=error)
 
-@app.route("/product_listings.html", methods=['POST', 'GET'])
-def product_listings():
-    '''This function displays the product
-       listing webpage and allows users to
-       click on subcategories to explore
-       what other subcategories exist
-       inside of the clicked-on
-       parent category.
-    '''
-    category_selected= request.args.get("category_name","All")
-    search_query = request.args.get("search", "").strip()
+#helper functions: to view listings of subcategories when you are browsing in parent category
+def build_category_tree():
     conn = sqlite3.connect("NittanyAuctionDB")
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     cursor.execute("SELECT category_name, parent_category FROM Categories")
     rows = cursor.fetchall()
+    conn.close()
 
-    categories =[]
+    categories = []
     for row in rows:
-        category = {"category_name":row["category_name"],"parent_category":row["parent_category"],"children":[]}
+        category = {
+            "category_name": row["category_name"],
+            "parent_category": row["parent_category"],
+            "children": []
+        }
         categories.append(category)
+
     categoriesD = {}
     for category in categories:
         categoriesD[category["category_name"]] = category
@@ -1846,30 +1932,97 @@ def product_listings():
             category_hierarchy.append(category)
         else:
             parent = categoriesD.get(parent_name)
-            if parent: parent["children"].append(category)
+            if parent is not None:
+                parent["children"].append(category)
+
+    return category_hierarchy
+
+
+def get_descendant_categories(category_name):
+    conn = sqlite3.connect("NittanyAuctionDB")
+    cursor = conn.cursor()
+
+    all_categories = [category_name]
+
+    cursor.execute("SELECT category_name FROM Categories WHERE parent_category = ?", (category_name,))
+    children = cursor.fetchall()
+
+    conn.close()
+
+    for child in children:
+        all_categories.extend(get_descendant_categories(child[0]))
+
+    return all_categories
+@app.route("/product_listings.html", methods=['POST', 'GET'])
+def product_listings():
+    '''This function displays the product
+       listing webpage and allows users to
+       click on subcategories to explore
+       what other subcategories exist
+       inside of the clicked-on
+       parent category.
+    '''
+    category_selected = request.args.get("category_name", "All")
+    search_query = request.args.get("search", "").strip()
+
+    category_hierarchy = build_category_tree()
+
+    conn = sqlite3.connect("NittanyAuctionDB")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    if category_selected != "All":
+        selected_categories = get_descendant_categories(category_selected)
+    else:
+        selected_categories = []
 
     if search_query and category_selected != "All":
-        cursor.execute("""SELECT listing_ID, product_name, category, reserve_price 
-                             FROM Auction_Listings 
-                             WHERE status=1 
-                             AND category = ?
-                             AND (product_name LIKE ? OR auction_title LIKE ? OR product_description LIKE ? or category LIKE ?)""",
-                       (category_selected, f"%{search_query}%", f"%{search_query}%", f"%{search_query}%", f"%{search_query}%"))
-    elif search_query:
-        cursor.execute("""SELECT listing_ID, product_name, category, reserve_price 
-                             FROM Auction_Listings 
-                             WHERE status=1 
-                             AND (product_name LIKE ? OR auction_title LIKE ? OR product_description LIKE ? OR category LIKE ?)""",
-                       (f"%{search_query}%", f"%{search_query}%", f"%{search_query}%", f"%{search_query}%"))
-    elif category_selected != "All":
-        cursor.execute("""SELECT listing_ID, product_name, category, reserve_price 
-                             FROM Auction_Listings WHERE category = ? AND status=1""",
-                       (category_selected,))
-    else:
-        cursor.execute("""SELECT listing_ID, product_name, category, reserve_price 
-                             FROM Auction_Listings WHERE status=1""")
+        placeholders = ",".join(["?"] * len(selected_categories))
+        sql = f"""
+            SELECT listing_ID, product_name, category, reserve_price, image_url
+            FROM Auction_Listings
+            WHERE status = 1
+            AND category IN ({placeholders})
+            AND (product_name LIKE ? OR auction_title LIKE ? OR product_description LIKE ? OR category LIKE ?)
+        """
+        params = selected_categories + [
+            f"%{search_query}%",
+            f"%{search_query}%",
+            f"%{search_query}%",
+            f"%{search_query}%"
+        ]
+        cursor.execute(sql, params)
 
-    products= cursor.fetchall()
+    elif search_query:
+        cursor.execute("""
+            SELECT listing_ID, product_name, category, reserve_price, image_url
+            FROM Auction_Listings
+            WHERE status = 1
+            AND (product_name LIKE ? OR auction_title LIKE ? OR product_description LIKE ? OR category LIKE ?)
+        """, (
+            f"%{search_query}%",
+            f"%{search_query}%",
+            f"%{search_query}%",
+            f"%{search_query}%"
+        ))
+
+    elif category_selected != "All":
+        placeholders = ",".join(["?"] * len(selected_categories))
+        sql = f"""
+            SELECT listing_ID, product_name, category, reserve_price, image_url
+            FROM Auction_Listings
+            WHERE status = 1 AND category IN ({placeholders})
+        """
+        cursor.execute(sql, selected_categories)
+
+    else:
+        cursor.execute("""
+            SELECT listing_ID, product_name, category, reserve_price, image_url
+            FROM Auction_Listings
+            WHERE status = 1
+        """)
+
+    products = cursor.fetchall()
     conn.close()
 
     product_images = {
@@ -1936,7 +2089,14 @@ def product_listings():
         "GG Yoga Socks": "https://m.media-amazon.com/images/I/81RNX14aqkL._AC_SX679_.jpg",
     }
 
-    return render_template("product_listings.html", categories=category_hierarchy, products=products, category_selected=category_selected, product_images=product_images, search_query=search_query)#sends the cat hierarchy, products in category selected and the category selected
+    return render_template(
+        "product_listings.html",
+        categories=category_hierarchy,
+        products=products,
+        category_selected=category_selected,
+        product_images=product_images,
+        search_query=search_query
+    )
 
 @app.route('/listing/<int:Listing_ID>')
 def product_detail(Listing_ID):
@@ -1955,15 +2115,28 @@ def product_detail(Listing_ID):
     cursor.execute("SELECT * FROM Auction_Listings WHERE listing_ID = ?", (Listing_ID,))
     listing = cursor.fetchone()
 
-    cursor.execute("SELECT * FROM Bids WHERE listing_ID = ? ORDER BY bid_price DESC", (Listing_ID,))
+    if listing is None:
+        conn.close()
+        return "Listing not found", 404
+
+    cursor.execute(
+        "SELECT * FROM Bids WHERE listing_ID = ? ORDER BY bid_price DESC",
+        (Listing_ID,)
+    )
     bids = cursor.fetchall()
 
     current_bid = bids[0]['bid_price'] if bids else None
 
-    cursor.execute("SELECT AVG(rating), COUNT(*) FROM Ratings WHERE seller_email = ?", (listing['seller_email'],))
+    cursor.execute(
+        "SELECT AVG(rating), COUNT(*) FROM Ratings WHERE seller_email = ?",
+        (listing['seller_email'],)
+    )
     rating_row = cursor.fetchone()
 
-    cursor.execute("SELECT * FROM Ratings WHERE seller_email = ? ORDER BY rating_date DESC", (listing['seller_email'],))
+    cursor.execute(
+        "SELECT * FROM Ratings WHERE seller_email = ? ORDER BY rating_date DESC",
+        (listing['seller_email'],)
+    )
     reviews = cursor.fetchall()
 
     product_images = {
@@ -2030,22 +2203,39 @@ def product_detail(Listing_ID):
         "GG Yoga Socks": "https://m.media-amazon.com/images/I/81RNX14aqkL._AC_SX679_.jpg",
     }
 
-    image_url = product_images.get(listing['Product_Name'], None)
+    placeholder_image = "https://via.placeholder.com/400x300?text=No+Image"
+
+    # check database image first
+    cursor.execute(
+        "SELECT image_url FROM Listing_Images WHERE listing_ID = ?",
+        (Listing_ID,)
+    )
+    image_row = cursor.fetchone()
+
+    # Use DB image first, otherwise fallback dictionary image
+    if image_row is not None and image_row['image_url'] != "":
+        image_url = image_row['image_url']
+    else:
+        image_url = product_images.get(
+            listing['product_name'],
+            placeholder_image
+        )
 
     conn.close()
 
-    return render_template('product_detail.html',
-                           listing=listing,
-                           bids=bids,
-                           current_bid=current_bid,
-                           avg_rating=rating_row[0],  # template uses avg_rating, not seller_rating
-                           rating_count=rating_row[1],
-                           seller_email=listing['seller_email'],  # template uses seller_email directly
-                           reviews=reviews,  # template needs reviews list
-                           image_url=image_url,
-                           error=None,
-                           success=None
-                           )
+    return render_template(
+        'product_detail.html',
+        listing=listing,
+        bids=bids,
+        current_bid=current_bid,
+        avg_rating=rating_row[0],
+        rating_count=rating_row[1],
+        seller_email=listing['seller_email'],
+        reviews=reviews,
+        image_url=image_url,
+        error=None,
+        success=None
+    )
 
 @app.route('/helpdeskbidder.html', methods=['GET','POST'])
 def helpdeskbidder():

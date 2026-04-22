@@ -3,111 +3,314 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
-    <title>Seller Listings</title>
+    <title>Seller Listings — NittanyAuction</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        body {
+            background: #eef4fb;
+            font-family: 'Playfair Display', sans-serif;
+        }
+
+        .top-nav {
+            background: #1a6fc4;
+            padding: .65rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .top-nav .brand {
+            color: #fff;
+            font-size: 1.4rem;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .top-nav .brand span {
+            color: #cce4ff;
+        }
+
+        .top-nav a.signout {
+            color: #cce4ff;
+            font-size: .85rem;
+            text-decoration: none;
+        }
+
+        .top-nav a.signout:hover {
+            color: #fff;
+        }
+
+        .welcome-bar {
+            background: #2980d9;
+            color: #fff;
+            padding: .65rem 1.5rem;
+            font-size: .92rem;
+        }
+
+        .welcome-bar strong {
+            color: #d6ecff;
+        }
+
+        .section-title {
+            font-size: .75rem;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            color: #5a8ab5;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+
+        .page-heading {
+            color: #1a4f8b;
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .sub-heading {
+            color: #1a4f8b;
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .card-section {
+            background: #fff;
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+        }
+
+        .btn-blue {
+            background: #1a6fc4;
+            border: none;
+            color: #fff;
+            font-weight: 600;
+            font-size: .95rem;
+            padding: .65rem 1.2rem;
+            border-radius: 6px;
+            text-decoration: none;
+            display: inline-block;
+            transition: background .2s;
+        }
+
+        .btn-blue:hover {
+            background: #155a9e;
+            color: #fff;
+        }
+
+        .btn-outline-blue {
+            background: #fff;
+            border: 1px solid #1a6fc4;
+            color: #1a6fc4;
+            font-weight: 600;
+            font-size: .9rem;
+            padding: .45rem 1rem;
+            border-radius: 6px;
+            transition: all .2s;
+        }
+
+        .btn-outline-blue:hover {
+            background: #1a6fc4;
+            color: #fff;
+        }
+
+        .btn-danger-soft {
+            background: #c94b4b;
+            border: none;
+            color: #fff;
+            font-weight: 600;
+            font-size: .9rem;
+            padding: .45rem 1rem;
+            border-radius: 6px;
+        }
+
+        .btn-danger-soft:hover {
+            background: #a93c3c;
+            color: #fff;
+        }
+
+        .table thead {
+            background: #dcecff;
+            color: #1a4f8b;
+        }
+
+        .table th,
+        .table td {
+            vertical-align: middle;
+        }
+
+        .empty-text {
+            color: #6c7f92;
+            margin-bottom: 0;
+        }
+
+        .action-stack {
+            display: flex;
+            flex-direction: column;
+            gap: .5rem;
+        }
+
+        .top-actions {
+            display: flex;
+            gap: .75rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+        }
+    </style>
 </head>
 <body>
-<h1> Seller Listings </h1>
-<form action="/create_listing.html" method="GET">
-    <button type="submit"> Create New Listing </button>
-</form>
-<br>
-<h2> Active Listings </h2>
-{% if active_listings %}
-<table class="table table-bordered">
-    <tr>
-        <th>Listing ID</th>
-        <th>Auction Title</th>
-        <th>Product Name</th>
-        <th>Category</th>
-        <th>Quantity</th>
-        <th>Bids Placed</th>
-        <th>Remaining Bids</th>
-        <th>Actions</th>
-    </tr>
-    {% for listing in active_listings %}
-    <tr>
-        <td>{{ listing.listing_ID }}</td>
-        <td>{{ listing.auction_title }}</td>
-        <td>{{ listing.product_name }}</td>
-        <td>{{ listing.category }}</td>
-        <td>{{ listing.quantity }}</td>
-        <td>{{ listing.bid_count }}</td>
-        <td>{{ listing.remaining_bids }}</td>
-        <td>
-            <form action="/edit_listing.html" method="GET">
-                <input type="hidden" name="listing_ID" value="{{ listing.listing_ID }}">
-                <button type="submit"> Edit </button>
-            </form>
-            <br>
-            <form action="/remove_listing.html" method="GET">
-                <input type="hidden" name="listing_ID" value="{{ listing.listing_ID }}">
-                <button type="submit"> Remove </button>
-            </form>
-        </td>
-    </tr>
-    {% endfor %}
-</table>
-{% else %}<p>No Active Listings.</p>{% endif %}
 
-<h2> Inactive Listings </h2>
-{% if inactive_listings %}
-<table class="table table-bordered">
-    <tr>
-        <th>Listing ID</th>
-        <th>Auction Title</th>
-        <th>Product Name</th>
-        <th>Category</th>
-        <th>Quantity</th>
-        <th>Actions</th>
-    </tr>
-    {% for listing in inactive_listings %}
-    <tr>
-        <td>{{ listing.listing_ID }}</td>
-        <td>{{ listing.auction_title }}</td>
-        <td>{{ listing.product_name }}</td>
-        <td>{{ listing.category }}</td>
-        <td>{{ listing.quantity }}</td>
-        <td>
-            <form action="/edit_listing.html" method="GET">
-                <input type="hidden" name="listing_ID" value="{{ listing.listing_ID }}">
-                <button type="submit"> Edit </button>
-            </form>
-        </td>
-    </tr>
-    {% endfor %}
-</table>
-{% else %}<p>No Inactive Listings.</p>{% endif %}
+<div class="top-nav">
+    <a class="brand" href="/">Nittany<span>Auction</span></a>
+    <a href="/" class="signout">Sign Out</a>
+</div>
 
-<h2> Sold Listings </h2>
-{% if sold_listings %}
-<table class="table table-bordered">
-    <tr>
-        <th>Listing ID</th>
-        <th>Auction Title</th>
-        <th>Product Name</th>
-        <th>Category</th>
-        <th>Quantity</th>
-        <th>Bids Placed</th>
-    </tr>
-    {% for listing in sold_listings %}
-    <tr>
-        <td>{{ listing.listing_ID }}</td>
-        <td>{{ listing.auction_title }}</td>
-        <td>{{ listing.product_name }}</td>
-        <td>{{ listing.category }}</td>
-        <td>{{ listing.quantity }}</td>
-        <td>{{ listing.bid_count }}</td>
-    </tr>
-    {% endfor %}
-</table>
-{% else %}<p>No Sold Listings.</p>{% endif %}
+<div class="welcome-bar">
+    Manage your auction listings here
+</div>
 
-<form action="/seller.html" method="GET">
-    <button type="submit"> Go Back </button>
-</form>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.min.js" integrity="sha384-G/EV+4j2dNv+tEPo3++6LCgdCROaejBqfUeNjuKAiuXbjrxilcCdDz6ZAVfHWe1Y" crossorigin="anonymous"></script>
+<div class="container py-4">
+    <p class="section-title">Seller Dashboard</p>
+    <h1 class="page-heading">Seller Listings</h1>
+
+    <div class="top-actions">
+        <form action="/create_listing.html" method="GET">
+            <button type="submit" class="btn-blue">Create New Listing</button>
+        </form>
+
+        <form action="/seller.html" method="GET">
+            <button type="submit" class="btn-outline-blue">Go Back</button>
+        </form>
+    </div>
+
+    <div class="card-section">
+        <h2 class="sub-heading">Active Listings</h2>
+        {% if active_listings %}
+        <div class="table-responsive">
+            <table class="table table-bordered align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Listing ID</th>
+                        <th>Auction Title</th>
+                        <th>Product Name</th>
+                        <th>Category</th>
+                        <th>Quantity</th>
+                        <th>Bids Placed</th>
+                        <th>Remaining Bids</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for listing in active_listings %}
+                    <tr>
+                        <td>{{ listing.listing_ID }}</td>
+                        <td>{{ listing.auction_title }}</td>
+                        <td>{{ listing.product_name }}</td>
+                        <td>{{ listing.category }}</td>
+                        <td>{{ listing.quantity }}</td>
+                        <td>{{ listing.bid_count }}</td>
+                        <td>{{ listing.remaining_bids }}</td>
+                        <td>
+                            <div class="action-stack">
+                                <form action="/edit_listing.html" method="GET">
+                                    <input type="hidden" name="listing_ID" value="{{ listing.listing_ID }}">
+                                    <button type="submit" class="btn-outline-blue w-100">Edit</button>
+                                </form>
+
+                                <form action="/remove_listing.html" method="GET">
+                                    <input type="hidden" name="listing_ID" value="{{ listing.listing_ID }}">
+                                    <button type="submit" class="btn-danger-soft w-100">Remove</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="empty-text">No active listings.</p>
+        {% endif %}
+    </div>
+
+    <div class="card-section">
+        <h2 class="sub-heading">Inactive Listings</h2>
+        {% if inactive_listings %}
+        <div class="table-responsive">
+            <table class="table table-bordered align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Listing ID</th>
+                        <th>Auction Title</th>
+                        <th>Product Name</th>
+                        <th>Category</th>
+                        <th>Quantity</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for listing in inactive_listings %}
+                    <tr>
+                        <td>{{ listing.listing_ID }}</td>
+                        <td>{{ listing.auction_title }}</td>
+                        <td>{{ listing.product_name }}</td>
+                        <td>{{ listing.category }}</td>
+                        <td>{{ listing.quantity }}</td>
+                        <td>
+                            <form action="/edit_listing.html" method="GET">
+                                <input type="hidden" name="listing_ID" value="{{ listing.listing_ID }}">
+                                <button type="submit" class="btn-outline-blue">Edit</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="empty-text">No inactive listings.</p>
+        {% endif %}
+    </div>
+
+    <div class="card-section">
+        <h2 class="sub-heading">Sold Listings</h2>
+        {% if sold_listings %}
+        <div class="table-responsive">
+            <table class="table table-bordered align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Listing ID</th>
+                        <th>Auction Title</th>
+                        <th>Product Name</th>
+                        <th>Category</th>
+                        <th>Quantity</th>
+                        <th>Bids Placed</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for listing in sold_listings %}
+                    <tr>
+                        <td>{{ listing.listing_ID }}</td>
+                        <td>{{ listing.auction_title }}</td>
+                        <td>{{ listing.product_name }}</td>
+                        <td>{{ listing.category }}</td>
+                        <td>{{ listing.quantity }}</td>
+                        <td>{{ listing.bid_count }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="empty-text">No sold listings.</p>
+        {% endif %}
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

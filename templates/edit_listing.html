@@ -3,55 +3,237 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
-    <title>Edit Listing</title>
+    <title>Edit Listing — NittanyAuction</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: #eef4fb;
+            font-family: 'Playfair Display', sans-serif;
+        }
+
+        .top-nav {
+            background: #1a6fc4;
+            padding: .65rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .top-nav .brand {
+            color: #fff;
+            font-size: 1.4rem;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .top-nav .brand span {
+            color: #cce4ff;
+        }
+
+        .top-nav a.signout {
+            color: #cce4ff;
+            font-size: .85rem;
+            text-decoration: none;
+        }
+
+        .top-nav a.signout:hover {
+            color: #fff;
+        }
+
+        .welcome-bar {
+            background: #2980d9;
+            color: #fff;
+            padding: .65rem 1.5rem;
+            font-size: .92rem;
+        }
+
+        .welcome-bar strong {
+            color: #d6ecff;
+        }
+
+        .section-title {
+            font-size: .75rem;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            color: #5a8ab5;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .page-card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
+        }
+
+        .page-heading {
+            color: #1a6fc4;
+            font-weight: 700;
+            margin-bottom: .5rem;
+        }
+
+        .info-text {
+            color: #4f6b85;
+            margin-bottom: .35rem;
+        }
+
+        .form-label {
+            font-weight: 600;
+            color: #2e5f8a;
+            margin-top: .75rem;
+        }
+
+        .form-control,
+        .form-select,
+        textarea {
+            border-radius: 8px;
+            border: 1px solid #c8d8ea;
+            padding: .65rem .85rem;
+        }
+
+        .form-control:focus,
+        .form-select:focus,
+        textarea:focus {
+            border-color: #1a6fc4;
+            box-shadow: 0 0 0 0.15rem rgba(26, 111, 196, 0.15);
+        }
+
+        .btn-blue {
+            background: #1a6fc4;
+            border: none;
+            color: #fff;
+            font-weight: 600;
+            font-size: .95rem;
+            padding: .75rem 1.25rem;
+            border-radius: 6px;
+            text-decoration: none;
+            transition: background .2s;
+        }
+
+        .btn-blue:hover {
+            background: #155a9e;
+            color: #fff;
+        }
+
+        .btn-outline-blue {
+            background: transparent;
+            border: 1px solid #1a6fc4;
+            color: #1a6fc4;
+            font-weight: 600;
+            font-size: .95rem;
+            padding: .75rem 1.25rem;
+            border-radius: 6px;
+            text-decoration: none;
+            transition: all .2s;
+        }
+
+        .btn-outline-blue:hover {
+            background: #1a6fc4;
+            color: #fff;
+        }
+
+        .error-box {
+            background: #ffe6e6;
+            color: #b42318;
+            border: 1px solid #f5b5b5;
+            border-radius: 8px;
+            padding: .85rem 1rem;
+            margin-bottom: 1rem;
+        }
+    </style>
 </head>
 <body>
-<h1> Edit Listing </h1>
-<br>
-<h3> Listing ID: {{ listing.listing_ID }} </h3>
-<p>Bids Placed: {{ listing.bid_count }}</p>
-<p>Remaining Bids: {{ listing.remaining_bids }}</p>
 
-{% if error == None %}
-<form method="POST">
-    <input type="hidden" name="listing_ID" value="{{ listing.listing_ID }}">
+<div class="top-nav">
+    <a class="brand" href="/">Nittany<span>Auction</span></a>
+    <a href="/" class="signout">Sign Out</a>
+</div>
 
-    <h3> Auction Title </h3>
-    <input type="text" name="auction_title" value="{{ listing.auction_title }}" required>
+<div class="welcome-bar">
+    Edit your listing details below
+</div>
 
-    <h3> Product Name </h3>
-    <input type="text" name="product_name" value="{{ listing.product_name }}" required>
+<div class="container py-4">
+    <p class="section-title">Seller Dashboard / Edit Listing</p>
 
-    <h3> Product Description </h3>
-    <textarea name="product_description" rows="4" cols="50">{{ listing.product_description }}</textarea>
+    <div class="page-card mx-auto" style="max-width: 850px;">
+        <h1 class="page-heading">Edit Listing</h1>
 
-    <h3> Category </h3>
-    <select name="category" required>
-        {% for category in categories %}
-        <option value="{{ category[0] }}" {% if category[0] == listing.category %}selected{% endif %}>{{ category[0] }}</option>
-        {% endfor %}
-    </select>
+        <p class="info-text"><strong>Listing ID:</strong> {{ listing.listing_ID }}</p>
+        <p class="info-text"><strong>Bids Placed:</strong> {{ listing.bid_count }}</p>
+        <p class="info-text"><strong>Remaining Bids:</strong> {{ listing.remaining_bids }}</p>
 
-    <h3> Quantity </h3>
-    <input type="number" name="quantity" min="1" value="{{ listing.quantity }}" required>
+        {% if error %}
+        <div class="error-box">
+            {{ error }}
+        </div>
+        {% endif %}
 
-    <h3> Reserve Price </h3>
-    <input type="text" name="reserve_price" value="{{ listing.reserve_price }}" required>
+        {% if error == None %}
+        <form method="POST">
+            <input type="hidden" name="listing_ID" value="{{ listing.listing_ID }}">
 
-    <h3> Max Bids </h3>
-    <input type="number" name="max_bids" min="1" value="{{ listing.max_bids }}" required>
-    <br><br>
-    <button type="submit"> Save Changes </button>
-</form>
-{% endif %}
+            <div class="mb-3">
+                <label class="form-label">Auction Title</label>
+                <input type="text" name="auction_title" class="form-control" value="{{ listing.auction_title }}" required>
+            </div>
 
-<form action="/seller_listings.html" method="GET">
-    <button type="submit"> Go Back </button>
-</form>
-{% if error %}<p style="color:red;">{{ error }}</p>{% endif %}
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.min.js" integrity="sha384-G/EV+4j2dNv+tEPo3++6LCgdCROaejBqfUeNjuKAiuXbjrxilcCdDz6ZAVfHWe1Y" crossorigin="anonymous"></script>
+            <div class="mb-3">
+                <label class="form-label">Product Name</label>
+                <input type="text" name="product_name" class="form-control" value="{{ listing.product_name }}" required>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Product Description</label>
+                <textarea name="product_description" class="form-control" rows="4">{{ listing.product_description }}</textarea>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Product Image URL (optional)</label>
+                <input type="text" name="image_url" class="form-control" value="{{ listing.image_url }}">
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Category</label>
+                <select name="category" class="form-select" required>
+                    {% for category in categories %}
+                    <option value="{{ category[0] }}" {% if category[0] == listing.category %}selected{% endif %}>
+                        {{ category[0] }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Quantity</label>
+                <input type="number" name="quantity" class="form-control" min="1" value="{{ listing.quantity }}" required>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Reserve Price</label>
+                <input type="text" name="reserve_price" class="form-control" value="{{ listing.reserve_price }}" required>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label">Max Bids</label>
+                <input type="number" name="max_bids" class="form-control" min="1" value="{{ listing.max_bids }}" required>
+            </div>
+
+            <div class="d-flex gap-2 flex-wrap">
+                <button type="submit" class="btn btn-blue">Save Changes</button>
+                <a href="/seller_listings.html" class="btn btn-outline-blue">Go Back</a>
+            </div>
+        </form>
+        {% else %}
+        <div class="mt-3">
+            <a href="/seller_listings.html" class="btn btn-outline-blue">Go Back</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
