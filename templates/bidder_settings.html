@@ -4,54 +4,127 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { background: #eef4fb; font-family: 'Playfair Display', sans-serif; }
 
+        .top-nav {
+            background: #1a6fc4;
+            padding: .65rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .top-nav .brand { color: #fff; font-size: 1.4rem; font-weight: 600; text-decoration: none; }
+        .top-nav .brand span { color: #cce4ff; }
+        .top-nav a.signout { color: #cce4ff; font-size: .85rem; text-decoration: none; }
+        .top-nav a.signout:hover { color: #fff; }
+
+        button{
+            background: #1a6fc4;
+            border: none;
+            color: #fff;
+            font-weight: 600;
+            font-size: .95rem;
+            padding: .75rem 0;
+            border-radius: 6px;
+            text-decoration: none;
+            display: block;
+            text-align: center;
+            width: 100%;
+            transition: background .2s;
+        }
+        button:hover { background: #155a9e; color: #fff; }
+        .request{
+            background: dimgrey;
+            border: none;
+            color: #fff;
+            font-weight: 600;
+            font-size: .95rem;
+            padding: .75rem 0;
+            border-radius: 6px;
+            text-decoration: none;
+            display: block;
+            text-align: center;
+            width: 100%;
+            transition: background .2s;
+        }
+        .request:hover { background: lightslategrey; color: #fff; }
+
+        p{
+            font-size:1.2rem;
+        }
+        h1{
+            padding: 10px;
+            margin-left: 15px;
+        }
+    </style>
 </head>
 <body>
-<h1> Bidder settings </h1>
-<p style="display: inline;"> User email: {{ email }} </p>
-<form method = "GET">
-    <button type="submit" name="change_email" value="change_email"> Request User Email Change</button>
-</form>
-<br>
-<p style="display: inline;"> First Name: {{ firstname }}</p>
-<form action="/change_firstname.html" method = "GET">
-    <button type="submit" name="change_firstname" value="change_firstname"> Change First Name</button>
-</form>
-<br>
-<p style="display: inline;"> Last Name: {{ lastname }}</p>
-<form action="/change_lastname.html" method = "GET">
-    <button type="submit" name="change_lastname" value="change_lastname"> Change Last Name</button>
-</form>
-<br>
-<p style="display: inline;"> Age: {{ age }}</p>
-<form action="/change_age.html" method = "GET">
-    <button type="submit" name="change_age" value="change_age"> Change Age</button>
-</form>
-<br>
-<p style="display: inline;"> major: {{ major }}</p>
-<form action="/change_major.html" method = "GET">
-    <button type="submit" name="change_major" value="change_major"> Change Major</button>
-</form>
-<br>
-<form action="/change_password.html" method = "GET">
-    <button type="submit" name="change password" value="change password"> Change Password</button>
-</form>
+<div class="top-nav">
+    <a class="brand" href="/">Nittany<span>Auction</span></a>
+    <a href="/" class="signout">Sign Out</a>
+</div>
+<h1>My Account Settings</h1>
+<div class="container py-4">
 
-<form action="/view_credit_cards.html" method="GET">
-    <button type="submit" name="change_credit_cards" value="change_credit_cards"> Change Credit Cards</button>
-</form>
-
-<form action="/change_address.html" method="GET">
-    <button type="submit" name="change_address" value="change_address"> Change Address</button>
-</form>
-<br>
-<form method="GET">
-    <button type="submit" name="request_seller_role" value="request_seller_role"> Request Seller Role</button>
-</form>
-<br>
-<form action="/bidder.html" method="GET">
-    <button type="submit" name="go_back" value="go_back"> Go Back</button>
-</form>
+    <div class="row g-3">
+        <div class="col-4">
+            <p>User email: {{ email }} <br>can only be changed through the HelpDesk.</p>
+        </div>
+        <div class="col-4">
+            <p> First Name: {{ firstname }}</p>
+            <form action="/change_firstname.html" method = "GET">
+            <button type="submit" name="change_firstname" value="change_firstname">Change First Name</button>
+        </form>
+        </div>
+        <div class="col-4">
+            <p>Last Name: {{ lastname }}</p>
+            <form action="/change_lastname.html" method = "GET">
+        <button type="submit" name="change_lastname" value="change_lastname"> Change Last Name</button>
+        </form>
+        </div>
+        <div class="col-4"></div>
+        <div class="col-4">
+            <p>Age: {{ age }}</p>
+            <form action="/change_age.html" method = "GET">
+            <button type="submit" name="change_age" value="change_age"> Change Age</button>
+        </form>
+        </div>
+        <div class="col-4">
+            <p>Major: {{ major }}</p>
+            <form action="/change_major.html" method = "GET">
+        <button type="submit" name="change_major" value="change_major"> Change Major</button>
+        </form>
+        </div>
+        <div clas="col-4"></div>
+        <div class="col-4">
+            <form action="/change_password.html" method = "GET">
+        <button type="submit" name="change password" value="change password"> Change Password</button>
+        </form>
+        </div>
+        <div class="col-4">
+        <form action="/view_credit_cards.html" method="GET">
+        <button type="submit" name="change_credit_cards" value="change_credit_cards"> Change Credit Cards</button>
+        </form>
+        </div>
+        <div class="col-4">
+        <form action="/change_address.html" method="GET">
+        <button type="submit" name="change_address" value="change_address"> Change Address</button>
+        </form>
+        </div>
+        <div class="col-12">
+        <form method="POST">
+        <button class="request" type="submit" name="change_role">Request Seller Role</button>
+        </form>
+        </div>
+        <div class="col-12">
+        <form action="/bidder.html" method="GET">
+        <button type="submit" name="go_back" value="go_back"> Go Back</button>
+        </form>
+        </div>
+    </div>
+</div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.min.js" integrity="sha384-G/EV+4j2dNv+tEPo3++6LCgdCROaejBqfUeNjuKAiuXbjrxilcCdDz6ZAVfHWe1Y" crossorigin="anonymous"></script>
