@@ -196,7 +196,7 @@
         <div class="label mt-3">Average Rating</div>
         <div class="value">
             {% if avg_rating %}
-                ⭐ {{ "%.2f"|format(avg_rating) }} / 5
+                 {{ "%.2f"|format(avg_rating) }} / 5
             {% else %}
                 <span class="text-muted">No ratings yet</span>
             {% endif %}
