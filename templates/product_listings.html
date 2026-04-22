@@ -68,6 +68,18 @@
         }
         .product-category { font-size: .75rem; color: #5a8ab5; margin-bottom: .4rem; }
         .product-price { font-size: .95rem; font-weight: 700; color: #1a6fc4; margin-top: auto; }
+
+        .account-link {
+            color: #cce4ff;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: .9rem;
+        }
+
+        .account-link:hover {
+            color: #ffffff;
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
@@ -89,7 +101,7 @@
 
     <div class="d-flex gap-3 align-items-center">
         <a href="/favorites.html" class="nav-link-right">♡ Favorites</a>
-        <a href="/bidder.html" class="nav-link-right">My Account</a>
+        <a href="{{ url_for('my_account') }}" style="color:#cce4ff; text-decoration:none;">My Account</a>
     </div>
 </div>
 

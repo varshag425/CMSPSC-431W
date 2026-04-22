@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>Credit Card Settings — NittanyAuction</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-<style>
+    <style>
         body { background: #eef4fb; font-family: 'Playfair Display', sans-serif; }
 
         .top-nav {
@@ -16,13 +17,34 @@
             align-items: center;
             justify-content: space-between;
         }
-        .top-nav .brand { color: #fff; font-size: 1.4rem; font-weight: 600; text-decoration: none; }
+
+        .top-nav .brand {
+            color: #fff;
+            font-size: 1.4rem;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
         .top-nav .brand span { color: #cce4ff; }
-        .top-nav a.signout { color: #cce4ff; font-size: .85rem; text-decoration: none; }
+
+        .top-nav a.signout {
+            color: #cce4ff;
+            font-size: .85rem;
+            text-decoration: none;
+        }
+
         .top-nav a.signout:hover { color: #fff; }
 
+        .container-box {
+            max-width: 800px;
+            margin: 40px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,.08);
+        }
 
-button{
+        .btn-blue {
             background: #1a6fc4;
             border: none;
             color: #fff;
@@ -36,33 +58,72 @@ button{
             width: 100%;
             transition: background .2s;
             margin-top: 20px;
-            margin-bottom:20px;
-            max-width:150px;
+            max-width: 180px;
         }
-button:hover { background: #155a9e; color: #fff; }
-</style>
+
+        .btn-blue:hover {
+            background: #155a9e;
+            color: #fff;
+        }
+
+        .card-row {
+            background: #f7fbff;
+            border: 1px solid #d6e7f7;
+            border-radius: 10px;
+            padding: 14px 18px;
+            margin-top: 12px;
+        }
+
+        .card-title {
+            font-weight: 600;
+            color: #1a3a5c;
+            margin-bottom: 4px;
+        }
+
+        .card-detail {
+            color: #4d6278;
+            margin: 0;
+        }
+    </style>
 </head>
 <body>
+
 <div class="top-nav">
     <a class="brand" href="/">Nittany<span>Auction</span></a>
     <a href="/" class="signout">Sign Out</a>
 </div>
-<h1> Credit Card Settings</h1>
-<br>
-<h2> Number of Credit Cards: {{ number_credit_cards }}</h2>
-<br>
-<form action="/add_credit_card.html" method="GET">
-    <button type="submit" name="add_credit_card" value="add_credit_card"> Add Credit Card</button>
-</form>
-<br>
-<form action="/remove_credit_card.html" method="GET">
-    <button type="submit" name="remove_credit_card" value="remove_credit_card"> Remove Credit Card</button>
-</form>
-<form action="/bidder_settings.html" method="GET">
-    <button type="submit" name="go_back" value="go_back"> Go Back</button>
-</form>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.min.js" integrity="sha384-G/EV+4j2dNv+tEPo3++6LCgdCROaejBqfUeNjuKAiuXbjrxilcCdDz6ZAVfHWe1Y" crossorigin="anonymous"></script>
+
+<div class="container-box">
+    <h1>Credit Card Settings</h1>
+    <h2 class="mt-3">Number of Credit Cards: {{ number_credit_cards }}</h2>
+
+    {% if cards %}
+        <div class="mt-4">
+            <h4>Saved Cards</h4>
+            {% for card in cards %}
+                <div class="card-row">
+                    <div class="card-title">{{ card.card_type }}</div>
+                    <p class="card-detail">Ending in {{ card.last4 }}</p>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="mt-4">No credit cards saved yet.</p>
+    {% endif %}
+
+    <form action="/add_credit_card.html" method="GET">
+        <button type="submit" name="add_credit_card" value="add_credit_card" class="btn-blue">Add Credit Card</button>
+    </form>
+
+    <form action="/remove_credit_card.html" method="GET">
+        <button type="submit" name="remove_credit_card" value="remove_credit_card" class="btn-blue">Remove Credit Card</button>
+    </form>
+
+    <form action="/bidder_settings.html" method="GET">
+        <button type="submit" name="go_back" value="go_back" class="btn-blue">Go Back</button>
+    </form>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

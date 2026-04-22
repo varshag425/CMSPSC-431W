@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Notifications — NittanyAuction</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        body {
+            min-height: 100vh;
+            font-family: 'Playfair Display', serif;
+            background: #eef4fb;
+        }
+
+        .top-nav {
+            background: #1a6fc4;
+            padding: .65rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brand {
+            color: #fff;
+            font-size: 1.4rem;
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .brand span {
+            color: #cce4ff;
+        }
+
+        .signout {
+            color: #cce4ff;
+            font-size: .9rem;
+            text-decoration: none;
+        }
+
+        .signout:hover {
+            color: #fff;
+        }
+
+        .content-card {
+            background: #fff;
+            border-radius: 10px;
+            border-top: 4px solid #1a6fc4;
+            box-shadow: 0 4px 20px rgba(26,111,196,.12);
+            padding: 2rem;
+        }
+
+        h1 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #1a3a5c;
+            margin-bottom: 1.5rem;
+        }
+
+        .btn-blue {
+            background: #1a6fc4;
+            border: none;
+            color: #fff;
+            font-weight: 600;
+            font-size: .85rem;
+            padding: .5rem .9rem;
+            border-radius: 6px;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-blue:hover {
+            background: #155a9e;
+            color: #fff;
+        }
+
+        .notification-box {
+            background: #f5f9ff;
+            border: 1px solid #c5dcf5;
+            border-radius: 8px;
+            padding: 1rem 1.1rem;
+            margin-bottom: 1rem;
+        }
+
+        .notification-text {
+            color: #1a3a5c;
+            font-size: .95rem;
+            margin-bottom: .4rem;
+        }
+
+        .notification-meta {
+            color: #5a8ab5;
+            font-size: .82rem;
+        }
+
+        .empty-text {
+            color: #5a8ab5;
+            font-size: .95rem;
+            margin-top: .5rem;
+        }
+    </style>
+</head>
+<body>
+
+<div class="top-nav">
+    <a class="brand" href="/">Nittany<span>Auction</span></a>
+    <a class="signout" href="/">Sign Out</a>
+</div>
+
+<div class="container py-5">
+    <div class="content-card">
+
+        <a href="/bidder.html" class="btn-blue mb-3">← Back to Dashboard</a>
+
+        <h1>Your Notifications</h1>
+
+        {% if notifications and notifications|length > 0 %}
+            {% for notification in notifications %}
+                <div class="notification-box">
+                    <div class="notification-text">
+                        {{ notification['message'] }}
+                    </div>
+
+                    <div class="notification-meta">
+                        Listing ID: {{ notification['listing_ID'] }}
+                        {% if notification['created_at'] %}
+                            | {{ notification['created_at'] }}
+                        {% endif %}
+                    </div>
+
+                    {% if notification['listing_ID'] %}
+                        <div class="mt-3">
+                            <a href="{{ url_for('product_detail', Listing_ID=notification['listing_ID']) }}" class="btn-blue">
+                                View Listing
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        {% else %}
+            <p class="empty-text">You do not have any notifications yet.</p>
+        {% endif %}
+
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

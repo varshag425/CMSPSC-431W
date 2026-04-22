@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Add Credit Card — NittanyAuction</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <style>
@@ -87,12 +87,22 @@
 
 <div class="container-box">
     <h1 class="mb-4">Add a New Credit Card</h1>
-    <p>Format: <strong>****-****-****-****</strong> or <strong>****-******-*****</strong>. Hyphens are required.</p>
+    <p>Accepted formats:</p>
+    <ul>
+        <li><strong>1234-5678-9012-3456</strong></li>
+        <li><strong>1234-567890-12345</strong></li>
+    </ul>
 
     <form method="POST">
         <div class="mb-3">
             <label class="form-label">Credit Card Number</label>
-            <input type="text" class="form-control" name="new_credit_card_number" required>
+            <input
+                type="text"
+                class="form-control"
+                name="new_credit_card_number"
+                placeholder="1234-5678-9012-3456"
+                pattern="(?:[0-9]{4}-){3}[0-9]{4}|[0-9]{4}-[0-9]{6}-[0-9]{5}"
+                required>
         </div>
 
         <div class="mb-3">
@@ -102,17 +112,35 @@
 
         <div class="mb-3">
             <label class="form-label">Expiration Month</label>
-            <input type="number" class="form-control" name="new_expire_month" required>
+            <input
+                type="number"
+                class="form-control"
+                name="new_expire_month"
+                min="1"
+                max="12"
+                required>
         </div>
 
         <div class="mb-3">
             <label class="form-label">Expiration Year</label>
-            <input type="number" class="form-control" name="new_expire_year" required>
+            <input
+                type="number"
+                class="form-control"
+                name="new_expire_year"
+                min="{{ current_year }}"
+                required>
         </div>
 
         <div class="mb-3">
             <label class="form-label">Security Code</label>
-            <input type="number" class="form-control" name="new_security_code" required>
+            <input
+                type="text"
+                class="form-control"
+                name="new_security_code"
+                maxlength="3"
+                pattern="[0-9]{3}"
+                placeholder="010"
+                required>
         </div>
 
         <button class="btn-blue" type="submit" name="submit_new_credit_card" value="submit_new_credit_card">
@@ -131,6 +159,6 @@
     {% endif %}
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

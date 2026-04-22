@@ -32,6 +32,7 @@ def database_setup():
     listing_removals_setup()
     listing_images_setup()
     favorites_setup()
+    notifications_setup()
 
 def user_setup():
     ''' This function sets up the Users
@@ -518,6 +519,25 @@ def favorites_setup():
     conn.commit()
     conn.close()
 
+def notifications_setup():
+    '''This function sets up the notifications table.'''
+    conn = sqlite3.connect("NittanyAuctionDB")
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS Notifications(
+            notification_ID INTEGER PRIMARY KEY,
+            user_email VARCHAR(50),
+            listing_ID INTEGER,
+            message VARCHAR(500),
+            is_read INTEGER DEFAULT 0,
+            created_at VARCHAR(50),
+            FOREIGN KEY (user_email) REFERENCES Users(email),
+            FOREIGN KEY (listing_ID) REFERENCES Auction_Listings(listing_ID)
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
 database_setup() # Call the database_setup function to setup the database before launching NittanyAuction
 app = Flask(__name__)
 ''' These next three lines setup the sessions
@@ -535,6 +555,46 @@ def index():
     '''
     session['webpage'] = 'index'
     return render_template('index.html')
+@app.route('/my_account')
+def my_account():
+    '''Redirects the current user to the correct account dashboard based on role.'''
+    email = session.get('email')
+
+    if email is None:
+        return redirect(url_for('login'))
+
+    role = session.get('role')
+
+    if role == 'bidder':
+        return redirect(url_for('bidder'))
+    elif role == 'seller' or role == 'local_vendor':
+        return redirect(url_for('seller'))
+    elif role == 'helpdesk':
+        return redirect(url_for('helpdesk'))
+
+    conn = sqlite3.connect("NittanyAuctionDB")
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM Bidders WHERE email = ?", (email,))
+    if cursor.fetchone() is not None:
+        conn.close()
+        session['role'] = 'bidder'
+        return redirect(url_for('bidder'))
+
+    cursor.execute("SELECT * FROM Helpdesk WHERE email = ?", (email,))
+    if cursor.fetchone() is not None:
+        conn.close()
+        session['role'] = 'helpdesk'
+        return redirect(url_for('helpdesk'))
+
+    cursor.execute("SELECT * FROM Sellers WHERE email = ?", (email,))
+    if cursor.fetchone() is not None:
+        conn.close()
+        session['role'] = 'seller'
+        return redirect(url_for('seller'))
+
+    conn.close()
+    return redirect(url_for('login'))
 
 @app.route('/login.html', methods=['POST', 'GET'])
 def login():
@@ -806,24 +866,36 @@ def seller():
 
 @app.route('/seller_settings.html', methods=["GET", "POST"])
 def seller_settings():
-    '''This function displays the seller
-       settings webpage and handles the
-       user input that will take them to
-       different webpages to change
-       any user settings available for
-       their role.
-    '''
     email = session.get('email')
     user_role = session.get('role')
     session['webpage'] = 'seller_settings'
+
+    if email is None:
+        return redirect(url_for('login'))
+
     conn = sqlite3.connect("NittanyAuctionDB")
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM Sellers WHERE email = ?", (email,))
     seller_info = cursor.fetchone()
-    bank_routing_number = str(seller_info[1])
-    bank_account_number = str(seller_info[2])
-    balance = float(str(seller_info[3]))
-    return render_template('seller_settings.html', email=email, bank_routing_number=bank_routing_number, bank_account_number=bank_account_number, balance=balance, role=user_role)
+
+    if seller_info is None:
+        conn.close()
+        return redirect(url_for('seller'))
+
+    bank_routing_number = "" if seller_info[1] is None else str(seller_info[1])
+    bank_account_number = "" if seller_info[2] is None else str(seller_info[2])
+    balance = 0.0 if seller_info[3] is None else float(seller_info[3])
+
+    conn.close()
+
+    return render_template(
+        'seller_settings.html',
+        email=email,
+        bank_routing_number=bank_routing_number,
+        bank_account_number=bank_account_number,
+        balance=balance,
+        role=user_role
+    )
 
 @app.route('/change_bank_routing_number.html', methods=['POST', 'GET'])
 def change_bank_routing_number():
@@ -1080,7 +1152,10 @@ def seller_listings():
             active_listings.append(listing_dict)
         elif listing['status'] == 0:
             inactive_listings.append(listing_dict)
-        elif listing['status'] == 2 or listing['status'] == 3:
+        elif listing['status'] == 2:
+            sold_listings.append(listing_dict)
+        elif listing['status'] == 3:
+            listing_dict['awaiting_payment'] = True
             sold_listings.append(listing_dict)
 
     conn.close()
@@ -1830,86 +1905,115 @@ def view_credit_cards():
        associated with their email.(bidder).
     '''
     user_email = session.get('email')
+
+    if user_email is None:
+        return redirect(url_for('login'))
+
     conn = sqlite3.connect("NittanyAuctionDB")
+    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM Credit_Cards C WHERE C.owner_email = ? ", (user_email,))
-    number_credit_cards = len(cursor.fetchall())
-    return render_template('view_credit_cards.html', number_credit_cards=number_credit_cards)
+
+    cursor.execute("""
+                   SELECT credit_card_num, card_type
+                   FROM Credit_Cards
+                   WHERE owner_email = ?
+                   """, (user_email,))
+    cards_raw = cursor.fetchall()
+
+    cards = []
+    for card in cards_raw:
+        full_num = str(card["credit_card_num"])
+        last4 = full_num[-4:] if len(full_num) >= 4 else full_num
+        cards.append({
+            "card_type": card["card_type"],
+            "last4": last4
+        })
+
+    number_credit_cards = len(cards)
+
+    conn.close()
+
+    return render_template(
+        'view_credit_cards.html',
+        number_credit_cards=number_credit_cards,
+        cards=cards
+    )
 
 @app.route('/add_credit_card.html', methods=['POST', 'GET'])
 def add_credit_card():
-    '''This function displays the add credit
-       card portal and handles the user input.
-       based on the user input, the function will
-       check to see if the new credit card number
-       is in an incorrect format, if the new credit
-       card number field is empty, if the new
-       credit card type field is empty, if the
-       new expire month field is empty, if the
-       new expire year field is empty, if the
-       new security code field is empty, if the
-       new credit card number is already registered
-       with another user, if the expire month is
-       a number not between 1 and 12, if the expire year
-       is a number less than 1950, and if the security
-       code is a number not between 0 and 999. If the user
-       input is valid, then the function will
-       insert the new credit card number, new
-       credit card type, expire month, expire
-       year, security code, and the user email
-       into a new row in the credit cards table.
-    '''
-    error=None
+    error = None
+    user_email = session.get('email')
+    current_year = datetime.now().year
+    current_month = datetime.now().month
+
+    if user_email is None:
+        return redirect(url_for('login'))
+
     if request.method == "POST":
-        new_credit_card_number = request.form['new_credit_card_number']
-        new_credit_card_type = request.form['new_credit_card_type']
-        new_expire_month = int(str(request.form['new_expire_month']))
-        new_expire_year = int(str(request.form['new_expire_year']))
-        new_security_code = int(str(request.form['new_security_code']))
-        user_email = session.get('email')
+        new_credit_card_number = request.form['new_credit_card_number'].strip()
+        new_credit_card_type = request.form['new_credit_card_type'].strip()
+        expire_month_text = request.form['new_expire_month'].strip()
+        expire_year_text = request.form['new_expire_year'].strip()
+        security_code_text = request.form['new_security_code'].strip()
+
         conn = sqlite3.connect("NittanyAuctionDB")
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM Credit_Cards")
         duplicate_credit_cards = cursor.fetchall()
+
         credit_card_number_format_1 = r'(?:[0-9]{4}-){3}[0-9]{4}'
         credit_card_number_format_2 = r'[0-9]{4}-[0-9]{6}-[0-9]{5}'
-        credit_card_number_match_1 = re.search(credit_card_number_format_1, new_credit_card_number)
-        credit_card_number_match_2 = re.search(credit_card_number_format_2, new_credit_card_number)
-        if credit_card_number_match_1 == None and credit_card_number_match_2 == None:
-            error = "Credit Card Number is in the incorrect format! Enter in the credit card number using the format above!"
-        elif credit_card_number_match_1 and len(new_credit_card_number) > 19:
-            error = "Credit Card Number is in the incorrect format! Enter in the credit card number using the format above!"
-        elif credit_card_number_match_2 and len(new_credit_card_number) > 17:
-            error = "Credit Card Number is in the incorrect format! Enter in the credit card number using the format above!"
-        elif (new_credit_card_number == ""):
-            error = "Credit Card Number field is empty! Type in a valid credit card number using the format above!"
+        credit_card_number_match_1 = re.fullmatch(credit_card_number_format_1, new_credit_card_number)
+        credit_card_number_match_2 = re.fullmatch(credit_card_number_format_2, new_credit_card_number)
+
+        if new_credit_card_number == "":
+            error = "Credit Card Number field is empty!"
+        elif credit_card_number_match_1 is None and credit_card_number_match_2 is None:
+            error = "Credit Card Number is in the incorrect format!"
         else:
-            for iterator in range (len(duplicate_credit_cards)):
-                if(new_credit_card_number == str(duplicate_credit_cards[iterator][0])):
-                    error = "Credit Card with that number already exists! Type in a different credit card number using the format above!"
+            for card in duplicate_credit_cards:
+                if new_credit_card_number == str(card[0]):
+                    error = "Credit Card with that number already exists!"
+                    break
 
-            if error == "Credit Card with that number already exists! Type in a different credit card number using the format above!":
-                error = "Credit Card with that number already exists! Type in a different credit card number using the format above!"
+        if error is None and new_credit_card_type == "":
+            error = "Credit Card Type field is empty!"
 
-            elif new_credit_card_type == "":
-                error = "Credit Card Type field is empty! Type in a valid credit card type!"
+        if error is None and (expire_month_text == "" or expire_year_text == "" or security_code_text == ""):
+            error = "Expire month, expire year, and security code must not be empty!"
 
-            elif new_expire_month < 1 or new_expire_month > 12:
-                error = "Expire Month field is not a number between 1 and 12 inclusive! Select or Type In an valid expire month!"
+        if error is None:
+            try:
+                new_expire_month = int(expire_month_text)
+                new_expire_year = int(expire_year_text)
+                new_security_code = security_code_text
+            except ValueError:
+                error = "Expire month, expire year, and security code must be valid numbers."
 
-            elif new_expire_year < 1950:
-                error = "Expire Year field is not a valid year! Select or Type in a valid expire year!"
+        if error is None and (new_expire_month < 1 or new_expire_month > 12):
+            error = "Expiration month must be between 1 and 12."
 
-            elif new_security_code < 0 or new_security_code > 999:
-                error = "Security Code field is not valid! Select or Type In a security code between 0 and 999!"
-            else:
-                cursor.execute("INSERT OR IGNORE INTO Credit_Cards(credit_card_num, card_type, expire_month, expire_year, security_code, owner_email) VALUES (?,?,?,?,?,?)", (new_credit_card_number,new_credit_card_type,new_expire_month,new_expire_year,new_security_code,user_email,))
-                conn.commit()
-                cursor.execute("SELECT * FROM Credit_Cards C WHERE C.owner_email = ?", (user_email,))
-                number_credit_cards = len(cursor.fetchall())
-                return render_template('view_credit_cards.html', number_credit_cards=number_credit_cards)
+        if error is None and new_expire_year < current_year:
+            error = "Expiration year must be the current year or later."
 
-    return render_template('add_credit_card.html', error=error)
+        if error is None and new_expire_year == current_year and new_expire_month < current_month:
+            error = "Expiration date must be after the current month."
+
+        if error is None and not re.fullmatch(r'[0-9]{3}', new_security_code):
+            error = "Security Code must be exactly 3 digits."
+
+        if error is None:
+            cursor.execute(
+                "INSERT OR IGNORE INTO Credit_Cards(credit_card_num, card_type, expire_month, expire_year, security_code, owner_email) VALUES (?,?,?,?,?,?)",
+                (new_credit_card_number, new_credit_card_type, new_expire_month, new_expire_year, new_security_code, user_email)
+            )
+            conn.commit()
+            conn.close()
+            return redirect(url_for('view_credit_cards'))
+
+        conn.close()
+
+    return render_template('add_credit_card.html', error=error, current_year=current_year)
 
 @app.route('/remove_credit_card.html', methods=['POST', 'GET'])
 def remove_credit_card():
@@ -2067,9 +2171,11 @@ def product_listings():
                 OR A.auction_title LIKE ?
                 OR A.product_description LIKE ?
                 OR A.category LIKE ?
+                OR A.seller_email LIKE ?
             )
         """
         params = selected_categories + [
+            f"%{search_query}%",
             f"%{search_query}%",
             f"%{search_query}%",
             f"%{search_query}%",
@@ -2079,22 +2185,24 @@ def product_listings():
 
     elif search_query:
         cursor.execute("""
-            SELECT A.listing_ID, A.product_name, A.category, A.reserve_price, I.image_url
-            FROM Auction_Listings A
-            LEFT JOIN Listing_Images I ON A.listing_ID = I.listing_ID
-            WHERE A.status = 1
-            AND (
-                A.product_name LIKE ?
-                OR A.auction_title LIKE ?
-                OR A.product_description LIKE ?
-                OR A.category LIKE ?
-            )
-        """, (
-            f"%{search_query}%",
-            f"%{search_query}%",
-            f"%{search_query}%",
-            f"%{search_query}%"
-        ))
+                       SELECT A.listing_ID, A.product_name, A.category, A.reserve_price, I.image_url
+                       FROM Auction_Listings A
+                                LEFT JOIN Listing_Images I ON A.listing_ID = I.listing_ID
+                       WHERE A.status = 1
+                         AND (
+                           A.product_name LIKE ?
+                               OR A.auction_title LIKE ?
+                               OR A.product_description LIKE ?
+                               OR A.category LIKE ?
+                               OR A.seller_email LIKE ?
+                           )
+                       """, (
+                           f"%{search_query}%",
+                           f"%{search_query}%",
+                           f"%{search_query}%",
+                           f"%{search_query}%",
+                           f"%{search_query}%"
+                       ))
 
     elif category_selected != "All":
         placeholders = ",".join(["?"] * len(selected_categories))
@@ -2304,7 +2412,7 @@ def product_detail(Listing_ID):
                     last_bidder = bids[0]['bidder_email'] if bids else None
                     current_bid = bids[0]['bid_price'] if bids else 0.0
 
-                                        if bid_count >= int(listing['max_bids']):
+                    if bid_count >= int(listing['max_bids']):
                         highest_bid = bids[0]['bid_price']
                         highest_bidder = bids[0]['bidder_email']
                         reserve_price = float(listing['reserve_price'][1:])
@@ -2442,10 +2550,10 @@ def product_detail(Listing_ID):
                            listing=listing,
                            bids=bids,
                            current_bid=current_bid,
-                           avg_rating=rating_row[0],  
+                           avg_rating=rating_row[0],
                            rating_count=rating_row[1],
-                           seller_email=listing['seller_email'],  
-                           reviews=reviews,  
+                           seller_email=listing['seller_email'],
+                           reviews=reviews,
                            image_url=image_url,
                            is_favorited=is_favorited,
                            remaining_bids=remaining_bids,
@@ -2521,9 +2629,83 @@ def payment_page(Listing_ID):
 
     if request.method == 'POST':
         selected_card = request.form.get('credit_card_num')
+        new_card_num = request.form.get('new_credit_card_num', '').strip()
+        new_card_type = request.form.get('new_card_type', '').strip()
+        new_expire_month = request.form.get('new_expire_month', '').strip()
+        new_expire_year = request.form.get('new_expire_year', '').strip()
+        new_security_code = request.form.get('new_security_code', '').strip()
 
-        if selected_card is None or selected_card == "":
-            error = "Please select a credit card."
+        if (selected_card is None or selected_card == "") and new_card_num == "":
+            error = "Please select an existing card or enter a new one."
+
+        elif new_card_num != "":
+            if new_card_type == "" or new_expire_month == "" or new_expire_year == "" or new_security_code == "":
+                error = "Please complete all new card fields."
+            else:
+                try:
+                    expire_month_int = int(new_expire_month)
+                    expire_year_int = int(new_expire_year)
+                    security_code_int = int(new_security_code)
+                except ValueError:
+                    error = "Expiration month, expiration year, and security code must be valid numbers."
+
+                if error is None:
+                    cursor.execute("""
+                                   INSERT
+                                   OR IGNORE INTO Credit_Cards
+                        (credit_card_num, card_type, expire_month, expire_year, security_code, owner_email)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                                   """, (
+                                       new_card_num,
+                                       new_card_type,
+                                       expire_month_int,
+                                       expire_year_int,
+                                       security_code_int,
+                                       email
+                                   ))
+                    conn.commit()
+                    selected_card = new_card_num
+
+        if error is None:
+            cursor.execute("SELECT MAX(transaction_ID) FROM Transactions")
+            max_transaction_id = cursor.fetchone()[0]
+            if max_transaction_id is None:
+                new_transaction_id = 1
+            else:
+                new_transaction_id = int(max_transaction_id) + 1
+
+            cursor.execute(
+                "INSERT INTO Transactions(transaction_ID, seller_email, listing_ID, bidder_email, transaction_date, payment) VALUES (?,?,?,?,datetime('now'),?)",
+                (new_transaction_id, listing['seller_email'], Listing_ID, email, payment_amount)
+            )
+
+            cursor.execute(
+                "UPDATE Auction_Listings SET status = 2 WHERE listing_ID = ?",
+                (Listing_ID,)
+            )
+
+            conn.commit()
+            conn.close()
+            return redirect(url_for('seller_rating', Listing_ID=Listing_ID))
+
+        if (selected_card is None or selected_card == "") and new_card_num == "":
+            error = "Please select an existing card or enter a new one."
+        elif new_card_num != "":
+            cursor.execute("""
+                           INSERT
+                           OR IGNORE INTO Credit_Cards
+                        (credit_card_num, card_type, expire_month, expire_year, security_code, owner_email)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                           """, (
+                               new_card_num,
+                               new_card_type,
+                               int(new_expire_month),
+                               int(new_expire_year),
+                               int(new_security_code),
+                               email
+                           ))
+            conn.commit()
+            selected_card = new_card_num
         else:
             cursor.execute("SELECT MAX(transaction_ID) FROM Transactions")
             max_transaction_id = cursor.fetchone()[0]
@@ -2556,7 +2738,8 @@ def payment_page(Listing_ID):
         error=error,
         email=email
     )
-@app.route('/seller_rating/<int:Listing_ID>.html', methods=['GET','POST'])
+
+@app.route('/seller_rating/<int:Listing_ID>.html', methods=['GET', 'POST'])
 def seller_rating(Listing_ID):
     '''This function displays the seller rating
        webpage and handles the user input.
@@ -2567,21 +2750,68 @@ def seller_rating(Listing_ID):
        rating description.
     '''
     email = session.get('email')
-    session['role'] = 'bidder'
-    session['webpage'] = 'seller_rating'
-    conn=sqlite3.connect("NittanyAuctionDB")
-    cursor=conn.cursor()
-    cursor.execute("SELECT seller_email FROM Auction_Listings WHERE listing_ID=?",(Listing_ID,))
-    seller_email = cursor.fetchone()[0]
-    date = datetime.now().strftime("%m/%d/%y")
+    if email is None:
+        return redirect(url_for('login'))
+
+    conn = sqlite3.connect("NittanyAuctionDB")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT seller_email FROM Auction_Listings WHERE listing_ID = ?", (Listing_ID,))
+    listing_row = cursor.fetchone()
+    if listing_row is None:
+        conn.close()
+        return redirect(url_for('product_listings'))
+
+    seller_email = listing_row['seller_email']
+
+    # Must be a paid winning bidder for this listing
+    cursor.execute("""
+        SELECT * FROM Transactions
+        WHERE listing_ID = ? AND bidder_email = ?
+    """, (Listing_ID, email))
+    transaction_row = cursor.fetchone()
+
+    if transaction_row is None:
+        conn.close()
+        return redirect(url_for('product_detail', Listing_ID=Listing_ID))
+
+    # Prevent duplicate rating for same completed auction
+    cursor.execute("""
+        SELECT * FROM Ratings
+        WHERE bidder_email = ? AND seller_email = ? AND rating_date = ?
+    """, (email, seller_email, transaction_row['transaction_date']))
+    existing_rating = cursor.fetchone()
+
+    error = None
+
+    if existing_rating is not None:
+        conn.close()
+        return redirect(url_for('product_detail', Listing_ID=Listing_ID))
+
     if request.method == 'POST':
         rating = request.form.get('rating')
-        rating_description=request.form.get('description')
-        cursor.execute("INSERT INTO Ratings VALUES(?,?,?,?,?)",(email,seller_email,date, int(rating),rating_description))
-        conn.commit()
-        return redirect(url_for('product_detail', Listing_ID=Listing_ID))
+        rating_description = request.form.get('description', '').strip()
+
+        if rating is None or rating == "":
+            error = "Please select a rating."
+        else:
+            cursor.execute("""
+                INSERT INTO Ratings(bidder_email, seller_email, rating_date, rating, rating_description)
+                VALUES (?, ?, ?, ?, ?)
+            """, (
+                email,
+                seller_email,
+                transaction_row['transaction_date'],
+                int(rating),
+                rating_description
+            ))
+            conn.commit()
+            conn.close()
+            return redirect(url_for('product_detail', Listing_ID=Listing_ID))
+
     conn.close()
-    return render_template('seller_rating.html', Listing_ID=Listing_ID, seller_email=seller_email)
+    return render_template('seller_rating.html', Listing_ID=Listing_ID, seller_email=seller_email, error=error)
 
 @app.route('/helpdeskseller.html', methods=['GET','POST'])
 def helpdeskseller():
@@ -2674,6 +2904,26 @@ def toggle_favorite(listing_ID):
     conn.close()
     return redirect(request.referrer or url_for('product_listings'))
 
+@app.route('/notifications.html')
+def notifications():
+    email = session.get('email')
+    if email is None:
+        return redirect(url_for('login'))
+
+    conn = sqlite3.connect("NittanyAuctionDB")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT * FROM Notifications
+        WHERE user_email = ?
+        ORDER BY notification_ID DESC
+    """, (email,))
+    notifications = cursor.fetchall()
+
+    conn.close()
+    return render_template('notifications.html', notifications=notifications)
+
 @app.route('/favorites.html')
 def favorites():
     email = session.get('email')
@@ -2682,11 +2932,38 @@ def favorites():
     conn = sqlite3.connect("NittanyAuctionDB")
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    cursor.execute("""SELECT A.listing_ID, A.product_name, A.category, A.reserve_price
-                     FROM Auction_Listings A
-                     JOIN Favorites F ON A.listing_ID = F.listing_ID
-                     WHERE F.bidder_email = ? AND A.status = 1""", (email,))
-    favorites = cursor.fetchall()
+    cursor.execute("""
+                   SELECT A.listing_ID,
+                          A.product_name,
+                          A.category,
+                          A.reserve_price,
+                          A.max_bids,
+                          A.status,
+                          A.seller_email,
+                          I.image_url
+                   FROM Auction_Listings A
+                            JOIN Favorites F ON A.listing_ID = F.listing_ID
+                            LEFT JOIN Listing_Images I ON A.listing_ID = I.listing_ID
+                   WHERE F.bidder_email = ?
+                     AND A.status IN (1, 3)
+                   """, (email,))
+
+    favorites_raw = cursor.fetchall()
+
+    favorites = []
+    for fav in favorites_raw:
+        fav_dict = dict(fav)
+
+        cursor.execute("SELECT MAX(bid_price), COUNT(*) FROM Bids WHERE listing_ID = ?", (fav['listing_ID'],))
+        bid_info = cursor.fetchone()
+        current_bid = 0.0 if bid_info[0] is None else float(bid_info[0])
+        bid_count = 0 if bid_info[1] is None else int(bid_info[1])
+
+        fav_dict['current_bid'] = current_bid
+        fav_dict['bid_count'] = bid_count
+        fav_dict['remaining_bids'] = int(fav['max_bids']) - bid_count
+        favorites.append(fav_dict)
+
     conn.close()
 
     product_images = {

@@ -96,9 +96,20 @@
             color: #fff;
         }
 
-        .form-select {
+        .form-select, .form-control {
             border-radius: 6px;
             padding: .7rem .9rem;
+        }
+
+        .divider-title {
+            font-size: .8rem;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            color: #5a8ab5;
+            font-weight: 600;
+            margin: 2rem 0 1rem 0;
+            border-top: 1px solid #dbe8f5;
+            padding-top: 1.25rem;
         }
     </style>
 </head>
@@ -132,9 +143,9 @@
 
         <form method="POST" class="mt-4">
             <div class="mb-3">
-                <label class="label">Select Credit Card</label>
-                <select name="credit_card_num" class="form-select" required>
-                    <option value="">-- Select a card --</option>
+                <label class="label">Select Saved Credit Card</label>
+                <select name="credit_card_num" class="form-select">
+                    <option value="">-- Select a saved card --</option>
                     {% for card in cards %}
                     <option value="{{ card['credit_card_num'] }}">
                         {{ card['card_type'] }} - {{ card['credit_card_num'] }}
@@ -142,6 +153,36 @@
                     {% endfor %}
                 </select>
             </div>
+
+            <div class="divider-title">Or Enter a New Card</div>
+
+            <div class="mb-3">
+                <label class="label">Credit Card Number</label>
+                <input type="text" name="new_credit_card_num" class="form-control" placeholder="1234-5678-9012-3456">
+            </div>
+
+            <div class="mb-3">
+                <label class="label">Card Type</label>
+                <input type="text" name="new_card_type" class="form-control" placeholder="Visa / Mastercard / AmEx">
+            </div>
+
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="label">Expire Month</label>
+                    <input type="number" name="new_expire_month" class="form-control" min="1" max="12" placeholder="MM">
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label class="label">Expire Year</label>
+                    <input type="number" name="new_expire_year" class="form-control" min="2024" placeholder="YYYY">
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label class="label">Security Code</label>
+                    <input type="number" name="new_security_code" class="form-control" min="0" max="999" placeholder="CVV">
+                </div>
+            </div>
+
             <button type="submit" class="btn-blue">Submit Payment</button>
         </form>
     </div>
