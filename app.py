@@ -502,6 +502,10 @@ def parse_reserve_price(reserve_price_text):
     return float(reserve_price_text)
 
 def favorites_setup():
+    '''This function sets up the favorites
+       table for the NittanyAuction
+       database.
+    '''
     conn = sqlite3.connect("NittanyAuctionDB")
     cursor = conn.cursor()
     cursor.execute('''CREATE TABLE IF NOT EXISTS Favorites(
@@ -1963,6 +1967,12 @@ def remove_credit_card():
 
 #helper functions: to view listings of subcategories when you are browsing in parent category
 def build_category_tree():
+    '''This function builds the category
+       tree that will visualize the
+       relationships between the
+       various categories in the product
+       listing page.
+    '''
     conn = sqlite3.connect("NittanyAuctionDB")
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
@@ -1997,6 +2007,11 @@ def build_category_tree():
 
 
 def get_descendant_categories(category_name):
+    ''' This function helps to organize
+        all of the descendant categories of
+        a parent category in the product
+        search page.
+    '''
     conn = sqlite3.connect("NittanyAuctionDB")
     cursor = conn.cursor()
 
@@ -2014,6 +2029,17 @@ def get_descendant_categories(category_name):
 
 @app.route("/product_listings.html", methods=['POST', 'GET'])
 def product_listings():
+    '''This function displays the product
+       listings page and handles the user
+       input. Based on the user input, the
+       function will check to see if the
+       user click on a category not named
+       'all'. If the user input is valid,
+       the function will show all the
+       descendant categories of the clicked
+       on category, and display all the
+       auction listings in that category.
+    '''
     category_selected = request.args.get("category_name", "All")
     search_query = request.args.get("search", "").strip()
 
@@ -2401,6 +2427,32 @@ def product_detail(Listing_ID):
 
 @app.route('/payment/<int:Listing_ID>', methods=['GET', 'POST'])
 def payment_page(Listing_ID):
+    '''This function displays the payment
+       portal and handles the user input.
+       Based on the user input, the function
+       checks to see if the bidder is not
+       logged in currently, if the listing
+       doesn't exist, if there are not bids
+       on the listing, if the bidder isn't
+       the winner, if the auction listing is
+       inactive, active, or finished but not
+       payed, and if the bidder's credit card
+       field is empty or credit card doesn't
+       exist for the user. If the user input
+       is valid, then the function will
+       either mark down a new transaction if
+       this is the first auction involving a
+       certain product or update the transaction
+       id for the product. Then, the function
+       will insert a new row into the transactions
+       table with the transaction id, seller email,
+       bidder email, listing id, transaction date, and
+       bidder payment. Then, the function will update
+       the proper row in auction listings where the
+       auction status for the auction listing is
+       set to 2 to denote that the auction is finished and
+       payed for.
+    '''
     email = session.get('email')
     if email is None:
         return redirect(url_for('login'))
@@ -2478,6 +2530,14 @@ def payment_page(Listing_ID):
     )
 @app.route('/seller_rating/<int:Listing_ID>.html', methods=['GET','POST'])
 def seller_rating(Listing_ID):
+    '''This function displays the seller rating
+       webpage and handles the user input.
+       Based on the user input, the function
+       will insert a new row into the ratings
+       table the bidder email, seller email,
+       date of the rating, the rating, and the
+       rating description.
+    '''
     email = session.get('email')
     session['role'] = 'bidder'
     session['webpage'] = 'seller_rating'
@@ -2497,6 +2557,22 @@ def seller_rating(Listing_ID):
 
 @app.route('/helpdeskseller.html', methods=['GET','POST'])
 def helpdeskseller():
+    '''This function displays the helpdesk
+       seller function request portal and
+       handles the user input. Based on
+       the user input, the function will check
+       to see if the request type is not
+       specified or it doesn't exist, and
+       if that specific request type is the
+       first instance. If the user input is valid,
+       then the function will insert a new
+       row into the requests table the email
+       of the request sender, the default helpdesk
+       staff email, the request id, the request
+       type, the request description, and the
+       request rating of 0 to specify that the
+       request is incomplete.
+    '''
     email = session.get('email')
     session['role'] = 'seller'
     session['webpage'] = 'helpdeskseller'
