@@ -2304,36 +2304,66 @@ def product_detail(Listing_ID):
                     last_bidder = bids[0]['bidder_email'] if bids else None
                     current_bid = bids[0]['bid_price'] if bids else 0.0
 
-                    if bid_count >= int(listing['max_bids']):
+                                        if bid_count >= int(listing['max_bids']):
                         highest_bid = bids[0]['bid_price']
                         highest_bidder = bids[0]['bidder_email']
-                        #reserve_price = float(listing['reserve_price'][1:])#$ cant be converted to float
-                        reserve_price = parse_reserve_price(listing['reserve_price'])
+                        reserve_price = float(listing['reserve_price'][1:])
 
                         if highest_bid >= reserve_price:
+                            auction_title = listing['auction_title']
+
                             cursor.execute(
                                 "UPDATE Auction_Listings SET status = 3 WHERE listing_ID = ?",
                                 (Listing_ID,)
                             )
+
+                            cursor.execute("""
+                                INSERT INTO Notifications (user_email, listing_id, message)
+                                VALUES (?, ?, ?)
+                            """, (highest_bidder, Listing_ID,
+                                  f"Congratulations! You won the auction for '{auction_title}' "
+                                  f"with a bid of ${highest_bid:.2f}."))
+
+                            cursor.execute("""
+                                SELECT DISTINCT bidder_email FROM Bids
+                                WHERE listing_ID = ? AND bidder_email != ?
+                            """, (Listing_ID, highest_bidder))
+                            for loser in cursor.fetchall():
+                                cursor.execute("""
+                                    INSERT INTO Notifications (user_email, listing_id, message)
+                                    VALUES (?, ?, ?)
+                                """, (loser['bidder_email'], Listing_ID,
+                                      f"The auction for '{auction_title}' has ended. "
+                                      f"Unfortunately, you did not win."))
+
                             conn.commit()
                             cursor.execute("SELECT * FROM Auction_Listings WHERE listing_ID = ?", (Listing_ID,))
                             listing = cursor.fetchone()
 
                             if bidder_email == highest_bidder:
-                                conn.close()
                                 return redirect(url_for('payment_page', Listing_ID=Listing_ID))
                             else:
                                 success = "Auction has ended. The winning bidder will complete payment."
+
+
                         else:
+
+                            auction_title = listing['auction_title']
                             cursor.execute(
                                 "UPDATE Auction_Listings SET status = 0 WHERE listing_ID = ?",
                                 (Listing_ID,)
                             )
-                            conn.commit()
-                            cursor.execute("SELECT * FROM Auction_Listings WHERE listing_ID = ?", (Listing_ID,))
-                            listing = cursor.fetchone()
-                            error = "Auction ended without meeting the reserve price."
+                            cursor.execute("""SELECT DISTINCT bidder_email FROM Bids WHERE listing_ID = ?
+                            """, (Listing_ID,))
 
+                            for bidder in cursor.fetchall():
+                                cursor.execute("""
+                                    INSERT INTO Notifications (user_email, listing_id, message)
+                                    VALUES (?, ?, ?)
+                                """, (bidder['bidder_email'], Listing_ID,
+                                      f"The auction for '{auction_title}' has closed. "
+                                      f"The reserve price was not met, so no sale occurred."))
+                            conn.commit()
 
     product_images = {
         "Sephora Rouge Gel Lip Liner": "https://www.sephora.com/productimages/sku/s2871036-main-zoom.jpg?imwidth=1224",
@@ -2399,8 +2429,6 @@ def product_detail(Listing_ID):
         "GG Yoga Socks": "https://m.media-amazon.com/images/I/81RNX14aqkL._AC_SX679_.jpg",
     }
 
-    #image_url = product_images.get(listing['Product_Name'], None)
-    #image_url = product_images.get(listing['product_name'], None) # table column is 'product_name'
     cursor.execute("SELECT image_url FROM Listing_Images WHERE listing_ID = ?", (Listing_ID,))
     image_row = cursor.fetchone()
 
@@ -2414,10 +2442,10 @@ def product_detail(Listing_ID):
                            listing=listing,
                            bids=bids,
                            current_bid=current_bid,
-                           avg_rating=rating_row[0],  # template uses avg_rating, not seller_rating
+                           avg_rating=rating_row[0],  
                            rating_count=rating_row[1],
-                           seller_email=listing['seller_email'],  # template uses seller_email directly
-                           reviews=reviews,  # template needs reviews list
+                           seller_email=listing['seller_email'],  
+                           reviews=reviews,  
                            image_url=image_url,
                            is_favorited=is_favorited,
                            remaining_bids=remaining_bids,
