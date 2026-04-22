@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>My Favorites — NittanyAuction</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background: #eef4fb; font-family: 'Playfair Display', serif; }
+        .top-nav {
+            background: #1a6fc4;
+            padding: .65rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .top-nav .brand { color: #fff; font-size: 1.4rem; font-weight: 700; text-decoration: none; }
+        .top-nav .brand span { color: #cce4ff; }
+        .top-nav a.nav-link-right { color: #cce4ff; font-size: .85rem; text-decoration: none; }
+        .top-nav a.nav-link-right:hover { color: #fff; }
+        .page-title { font-size: 1.4rem; font-weight: 700; color: #1a3a5c; margin-bottom: 1rem; }
+        .product-card {
+            background: #fff;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 1px 4px rgba(26,111,196,.1);
+            border-top: 3px solid #e06060;
+            transition: box-shadow .2s, transform .2s;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        .product-card:hover { box-shadow: 0 6px 20px rgba(26,111,196,.15); transform: translateY(-2px); }
+        .product-card a { text-decoration: none; color: inherit; display: flex; flex-direction: column; height: 100%; }
+        .product-img { width: 100%; height: 160px; object-fit: contain; background: #f0f6ff; padding: 1rem; }
+        .product-img-placeholder { width: 100%; height: 160px; background: #f0f6ff; display: flex; align-items: center; justify-content: center; color: #aac4e0; font-size: .8rem; }
+        .product-body { padding: .75rem; flex: 1; display: flex; flex-direction: column; }
+        .product-name { font-size: .88rem; font-weight: 600; color: #1a3a5c; margin-bottom: .25rem; }
+        .product-category { font-size: .75rem; color: #5a8ab5; margin-bottom: .4rem; }
+        .product-price { font-size: .95rem; font-weight: 700; color: #1a6fc4; margin-top: auto; }
+    </style>
+</head>
+<body>
+
+<div class="top-nav">
+    <a class="brand" href="/">Nittany<span>Auction</span></a>
+    <div class="d-flex gap-3 align-items-center">
+        <a href="/favorites.html" class="nav-link-right">♥ Favorites</a>
+        <a href="/bidder.html" class="nav-link-right">My Account</a>
+    </div>
+</div>
+
+<div class="container-fluid px-4 py-4">
+    <a href="/product_listings.html" style="color:#1a6fc4; font-size:.85rem; text-decoration:none;">← Back to Listings</a>
+    <div class="page-title mt-3">♥ My Favorites</div>
+
+    {% if favorites %}
+    <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 g-3">
+        {% for item in favorites %}
+        <div class="col">
+            <div class="product-card">
+                <a href="/listing/{{ item['listing_ID'] }}">
+                    {% if item['product_name'] in product_images %}
+                    <img src="{{ product_images[item['product_name']] }}" alt="{{ item['product_name'] }}" class="product-img">
+                    {% else %}
+                    <div class="product-img-placeholder">No Image</div>
+                    {% endif %}
+                    <div class="product-body">
+                        <div class="product-name">{{ item['product_name'] }}</div>
+                        <div class="product-category">{{ item['category'] }}</div>
+                        <div class="product-price">{{ item['reserve_price'] }}</div>
+                    </div>
+                </a>
+                <!-- Remove from favorites -->
+                <form action="/toggle_favorite/{{ item['listing_ID'] }}" method="POST" style="padding:.5rem .75rem;">
+                    <button type="submit" style="background:#ffe0e0; border:1.5px solid #e06060; border-radius:6px; padding:.25rem .6rem; font-size:.75rem; color:#c0392b; cursor:pointer; width:100%; font-family:'Playfair Display',serif;">
+                        ♥ Remove
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p style="color:#5a8ab5;">You haven't favorited any items yet. <a href="/product_listings.html" style="color:#1a6fc4;">Browse listings</a></p>
+    {% endif %}
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
