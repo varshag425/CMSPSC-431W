@@ -1955,13 +1955,6 @@ def get_descendant_categories(category_name):
     return all_categories
 @app.route("/product_listings.html", methods=['POST', 'GET'])
 def product_listings():
-    '''This function displays the product
-       listing webpage and allows users to
-       click on subcategories to explore
-       what other subcategories exist
-       inside of the clicked-on
-       parent category.
-    '''
     category_selected = request.args.get("category_name", "All")
     search_query = request.args.get("search", "").strip()
 
@@ -1979,11 +1972,17 @@ def product_listings():
     if search_query and category_selected != "All":
         placeholders = ",".join(["?"] * len(selected_categories))
         sql = f"""
-            SELECT listing_ID, product_name, category, reserve_price, image_url
-            FROM Auction_Listings
-            WHERE status = 1
-            AND category IN ({placeholders})
-            AND (product_name LIKE ? OR auction_title LIKE ? OR product_description LIKE ? OR category LIKE ?)
+            SELECT A.listing_ID, A.product_name, A.category, A.reserve_price, I.image_url
+            FROM Auction_Listings A
+            LEFT JOIN Listing_Images I ON A.listing_ID = I.listing_ID
+            WHERE A.status = 1
+            AND A.category IN ({placeholders})
+            AND (
+                A.product_name LIKE ?
+                OR A.auction_title LIKE ?
+                OR A.product_description LIKE ?
+                OR A.category LIKE ?
+            )
         """
         params = selected_categories + [
             f"%{search_query}%",
@@ -1995,10 +1994,16 @@ def product_listings():
 
     elif search_query:
         cursor.execute("""
-            SELECT listing_ID, product_name, category, reserve_price, image_url
-            FROM Auction_Listings
-            WHERE status = 1
-            AND (product_name LIKE ? OR auction_title LIKE ? OR product_description LIKE ? OR category LIKE ?)
+            SELECT A.listing_ID, A.product_name, A.category, A.reserve_price, I.image_url
+            FROM Auction_Listings A
+            LEFT JOIN Listing_Images I ON A.listing_ID = I.listing_ID
+            WHERE A.status = 1
+            AND (
+                A.product_name LIKE ?
+                OR A.auction_title LIKE ?
+                OR A.product_description LIKE ?
+                OR A.category LIKE ?
+            )
         """, (
             f"%{search_query}%",
             f"%{search_query}%",
@@ -2009,20 +2014,22 @@ def product_listings():
     elif category_selected != "All":
         placeholders = ",".join(["?"] * len(selected_categories))
         sql = f"""
-            SELECT listing_ID, product_name, category, reserve_price, image_url
-            FROM Auction_Listings
-            WHERE status = 1 AND category IN ({placeholders})
+            SELECT A.listing_ID, A.product_name, A.category, A.reserve_price, I.image_url
+            FROM Auction_Listings A
+            LEFT JOIN Listing_Images I ON A.listing_ID = I.listing_ID
+            WHERE A.status = 1 AND A.category IN ({placeholders})
         """
         cursor.execute(sql, selected_categories)
 
     else:
         cursor.execute("""
-            SELECT listing_ID, product_name, category, reserve_price, image_url
-            FROM Auction_Listings
-            WHERE status = 1
+            SELECT A.listing_ID, A.product_name, A.category, A.reserve_price, I.image_url
+            FROM Auction_Listings A
+            LEFT JOIN Listing_Images I ON A.listing_ID = I.listing_ID
+            WHERE A.status = 1
         """)
 
-    products = cursor.fetchall()
+    products_raw = cursor.fetchall()
     conn.close()
 
     product_images = {
@@ -2088,6 +2095,21 @@ def product_listings():
         "SV ES Melatonin": "https://i5.walmartimages.com/seo/Spring-Valley-Extra-Strength-Melatonin-Tablets-Dietary-Supplement-Value-Size-10-mg-240-Count_192a6111-e5bc-4d6d-bce8-aea574f86f5d.5c142b8bc0135d8b5ebce8b836915607.jpeg?odnHeight=573&odnWidth=573&odnBg=FFFFFF",
         "GG Yoga Socks": "https://m.media-amazon.com/images/I/81RNX14aqkL._AC_SX679_.jpg",
     }
+
+    #placeholder_image = "https://via.placeholder.com/300x200?text=No+Image"
+
+    products = []
+    for product in products_raw:
+        product_dict = dict(product)
+
+        if product_dict["image_url"]:
+            product_dict["final_image_url"] = product_dict["image_url"]
+        elif product_dict["product_name"] in product_images:
+            product_dict["final_image_url"] = product_images[product_dict["product_name"]]
+        else:
+            product_dict["final_image_url"] = None
+
+        products.append(product_dict)
 
     return render_template(
         "product_listings.html",

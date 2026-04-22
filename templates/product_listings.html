@@ -223,8 +223,8 @@
         <div class="col">
             <div class="product-card">
                 <a href="/listing/{{ product['listing_ID'] }}">
-                    {% if product['product_name'] in product_images %}
-                    <img src="{{ product_images[product['product_name']] }}"
+                    {% if product['final_image_url'] %}
+                    <img src="{{ product['final_image_url'] }}"
                          alt="{{ product['product_name'] }}"
                          class="product-img">
                     {% else %}
