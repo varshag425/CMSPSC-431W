@@ -93,7 +93,12 @@
 <!-- NAV -->
 <div class="top-nav">
     <a class="brand" href="/">Nittany<span>Auction</span></a>
+    <div class="d-flex gap-3 align-items-center">
+        <a href="/favorites.html" class="nav-link-right">♡ Favorites</a>
+        <a href="/bidder.html" class="nav-link-right">My Account</a>
+    </div>
 </div>
+
 
 <!-- MAIN -->
 <div class="container py-5">
@@ -103,6 +108,25 @@
         <a href="/product_listings.html" class="btn-blue mb-3 d-inline-block">← Back to Listings</a>
 
         <h1>{{ listing['auction_title'] }}</h1>
+
+        <!-- FAVORITE BUTTON -->
+        <form action="/toggle_favorite/{{ listing['listing_ID'] }}" method="POST" class="d-inline">
+            <button type="submit" style="
+                background: {% if is_favorited %}#ffe0e0{% else %}#f0f6ff{% endif %};
+                border: 1.5px solid {% if is_favorited %}#e06060{% else %}#c5dcf5{% endif %};
+                border-radius: 6px;
+                padding: .35rem .8rem;
+                font-size: .85rem;
+                color: {% if is_favorited %}#c0392b{% else %}#5a8ab5{% endif %};
+                cursor: pointer;
+                font-family: 'Playfair Display', serif;
+                margin-bottom: 1rem;
+            ">
+                {% if is_favorited %}♥ Favorited{% else %}♡ Add to Favorites{% endif %}
+            </button>
+        </form>
+
+        <div class="row mt-3">
 
         <div class="row mt-4">
 
@@ -195,11 +219,6 @@
         {% else %}
             <p class="text-muted mt-1">No reviews available.</p>
         {% endif %}
-
-        <!-- Message Button -->
-        <div class="mt-3">
-            <button class="btn-outline-blue">Send Message</button>
-        </div>
 
     </div>
 
