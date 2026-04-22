@@ -2134,7 +2134,7 @@ def product_listings():
         search_query=search_query
     )
 
-@app.route('/listing/<int:Listing_ID>')
+@app.route('/listing/<int:Listing_ID>', methods=['GET', 'POST'])
 def product_detail(Listing_ID):
     '''This function takes in a listing
        id and displays the auction listing
@@ -2150,11 +2150,17 @@ def product_detail(Listing_ID):
 
     cursor.execute("SELECT * FROM Auction_Listings WHERE listing_ID = ?", (Listing_ID,))
     listing = cursor.fetchone()
+    if listing is None:
+        conn.close()
+        return redirect(url_for('product_listings'))
 
     cursor.execute("SELECT * FROM Bids WHERE listing_ID = ? ORDER BY bid_price DESC", (Listing_ID,))
     bids = cursor.fetchall()
 
-    current_bid = bids[0]['bid_price'] if bids else None
+    bid_count = len(bids)
+    remaining_bids = int(listing['max_bids']) - bid_count
+    last_bidder = bids[0]['bidder_email'] if bids else None
+    current_bid = bids[0]['bid_price'] if bids else 0.0
 
     cursor.execute("SELECT AVG(rating), COUNT(*) FROM Ratings WHERE seller_email = ?", (listing['seller_email'],))
     rating_row = cursor.fetchone()
@@ -2167,6 +2173,90 @@ def product_detail(Listing_ID):
     if email:
         cursor.execute("SELECT * FROM Favorites WHERE bidder_email = ? AND listing_ID = ?", (email, Listing_ID))
         is_favorited = cursor.fetchone() is not None
+
+    #bid validation
+    error = None
+    success = None
+
+    if request.method == 'POST':
+        bidder_email = session.get('email')
+
+        if bidder_email is None:
+            error = "You must be logged in as a bidder to place a bid."
+        else:
+            cursor.execute("SELECT * FROM Bidders WHERE email = ?", (bidder_email,))
+            bidder_row = cursor.fetchone()
+
+            if bidder_row is None:
+                error = "Only bidders can place bids."
+            else:
+                bid_amount_text = str(request.form.get('bid_amount', '')).strip()
+
+                try:
+                    bid_amount = float(bid_amount_text)
+                except ValueError:
+                    bid_amount = -1
+
+                if int(listing['status']) != 1:
+                    error = "This auction is no longer active."
+                elif bidder_email == listing['seller_email']:
+                    error = "You cannot bid on your own listing."
+                elif remaining_bids <= 0:
+                    error = "This auction has already ended."
+                elif bid_amount < current_bid + 1:
+                    error = "Your bid must be at least $1 higher than the current highest bid."
+                elif last_bidder is not None and bidder_email == last_bidder:
+                    error = "You cannot place consecutive bids on the same listing."
+                else:
+                    cursor.execute("SELECT MAX(bid_ID) FROM Bids")
+                    max_bid_id = cursor.fetchone()[0]
+                    if max_bid_id is None:
+                        new_bid_id = 1
+                    else:
+                        new_bid_id = int(max_bid_id) + 1
+
+                    cursor.execute(
+                        "INSERT INTO Bids(bid_ID, seller_email, listing_ID, bidder_email, bid_price) VALUES (?,?,?,?,?)",
+                        (new_bid_id, listing['seller_email'], Listing_ID, bidder_email, bid_amount)
+                    )
+                    conn.commit()
+                    success = "Your bid was placed successfully."
+
+                    cursor.execute("SELECT * FROM Bids WHERE listing_ID = ? ORDER BY bid_price DESC", (Listing_ID,))
+                    bids = cursor.fetchall()
+
+                    bid_count = len(bids)
+                    remaining_bids = int(listing['max_bids']) - bid_count
+                    last_bidder = bids[0]['bidder_email'] if bids else None
+                    current_bid = bids[0]['bid_price'] if bids else 0.0
+
+                    if bid_count >= int(listing['max_bids']):
+                        highest_bid = bids[0]['bid_price']
+                        highest_bidder = bids[0]['bidder_email']
+                        reserve_price = float(listing['reserve_price'])
+
+                        if highest_bid >= reserve_price:
+                            cursor.execute(
+                                "UPDATE Auction_Listings SET status = 3 WHERE listing_ID = ?",
+                                (Listing_ID,)
+                            )
+                            conn.commit()
+                            cursor.execute("SELECT * FROM Auction_Listings WHERE listing_ID = ?", (Listing_ID,))
+                            listing = cursor.fetchone()
+
+                            if bidder_email == highest_bidder:
+                                return redirect(url_for('payment_page', Listing_ID=Listing_ID))
+                            else:
+                                success = "Auction has ended. The winning bidder will complete payment."
+                        else:
+                            cursor.execute(
+                                "UPDATE Auction_Listings SET status = 0 WHERE listing_ID = ?",
+                                (Listing_ID,)
+                            )
+                            conn.commit()
+                            cursor.execute("SELECT * FROM Auction_Listings WHERE listing_ID = ?", (Listing_ID,))
+                            listing = cursor.fetchone()
+                            error = "Auction ended without meeting the reserve price."
 
 
     product_images = {
@@ -2233,8 +2323,15 @@ def product_detail(Listing_ID):
         "GG Yoga Socks": "https://m.media-amazon.com/images/I/81RNX14aqkL._AC_SX679_.jpg",
     }
 
-    image_url = product_images.get(listing['Product_Name'], None)
+    #image_url = product_images.get(listing['Product_Name'], None)
+    #image_url = product_images.get(listing['product_name'], None) # table column is 'product_name'
+    cursor.execute("SELECT image_url FROM Listing_Images WHERE listing_ID = ?", (Listing_ID,))
+    image_row = cursor.fetchone()
 
+    if image_row is not None and image_row['image_url'] is not None and image_row['image_url'] != "":
+        image_url = image_row['image_url']
+    else:
+        image_url = product_images.get(listing['product_name'], None)
     conn.close()
 
     return render_template('product_detail.html',
@@ -2247,10 +2344,84 @@ def product_detail(Listing_ID):
                            reviews=reviews,  # template needs reviews list
                            image_url=image_url,
                            is_favorited=is_favorited,
-                           error=None,
-                           success=None
+                           remaining_bids=remaining_bids,
+                           error=error,
+                           success=success
                            )
 
+@app.route('/payment/<int:Listing_ID>', methods=['GET', 'POST'])
+def payment_page(Listing_ID):
+    email = session.get('email')
+    if email is None:
+        return redirect(url_for('login'))
+
+    conn = sqlite3.connect("NittanyAuctionDB")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM Auction_Listings WHERE listing_ID = ?", (Listing_ID,))
+    listing = cursor.fetchone()
+
+    if listing is None:
+        conn.close()
+        return redirect(url_for('product_listings'))
+
+    cursor.execute("SELECT * FROM Bids WHERE listing_ID = ? ORDER BY bid_price DESC", (Listing_ID,))
+    bids = cursor.fetchall()
+
+    if len(bids) == 0:
+        conn.close()
+        return redirect(url_for('product_detail', Listing_ID=Listing_ID))
+
+    winning_bid = bids[0]
+    winning_bidder = winning_bid['bidder_email']
+    payment_amount = float(winning_bid['bid_price'])
+
+    if email != winning_bidder:
+        conn.close()
+        return redirect(url_for('product_detail', Listing_ID=Listing_ID))
+
+    cursor.execute("SELECT * FROM Credit_Cards WHERE owner_email = ?", (email,))
+    cards = cursor.fetchall()
+
+    error = None
+
+    if request.method == 'POST':
+        selected_card = request.form.get('credit_card_num')
+
+        if selected_card is None or selected_card == "":
+            error = "Please select a credit card."
+        else:
+            cursor.execute("SELECT MAX(transaction_ID) FROM Transactions")
+            max_transaction_id = cursor.fetchone()[0]
+            if max_transaction_id is None:
+                new_transaction_id = 1
+            else:
+                new_transaction_id = int(max_transaction_id) + 1
+
+            cursor.execute(
+                "INSERT INTO Transactions(transaction_ID, seller_email, listing_ID, bidder_email, transaction_date, payment) VALUES (?,?,?,?,datetime('now'),?)",
+                (new_transaction_id, listing['seller_email'], Listing_ID, email, payment_amount)
+            )
+
+            cursor.execute(
+                "UPDATE Auction_Listings SET status = 2 WHERE listing_ID = ?",
+                (Listing_ID,)
+            )
+
+            conn.commit()
+            conn.close()
+            return redirect(url_for('product_detail', Listing_ID=Listing_ID))
+
+    conn.close()
+    return render_template(
+        'payment.html',
+        listing=listing,
+        winning_bid=winning_bid,
+        payment_amount=payment_amount,
+        cards=cards,
+        error=error
+    )
 
 @app.route('/helpdeskbidder.html', methods=['GET','POST'])
 def helpdeskbidder():

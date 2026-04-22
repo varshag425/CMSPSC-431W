@@ -148,8 +148,12 @@
                         <div class="value">
                             {% if listing['status'] == 1 %}
                                 Active
+                            {% elif listing['status'] == 3 %}
+                                Awaiting Payment
+                            {% elif listing['status'] == 2 %}
+                                Sold
                             {% else %}
-                                Closed
+                                Inactive
                             {% endif %}
                         </div>
                     </div>
@@ -200,7 +204,45 @@
     </div>
 
 </div>
+        <!-- AUCTION STATUS -->
+        <div class="mt-5">
+            <h5 style="color:#1a3a5c; font-weight:700;">Auction Status</h5>
 
+            <div class="content-card p-3" style="border-top: 3px solid #1a6fc4;">
+                <div class="label">Current Highest Bid</div>
+                <div class="value">
+                    ${{ "%.2f"|format(current_bid) if current_bid else "0.00" }}
+                </div>
+
+                <div class="label">Bids Placed</div>
+                <div class="value">{{ bids|length }}</div>
+
+                <div class="label">Remaining Bids</div>
+                <div class="value">{{ remaining_bids }}</div>
+
+                {% if error %}
+                    <div class="alert alert-danger mt-3">{{ error }}</div>
+                {% endif %}
+
+                {% if success %}
+                    <div class="alert alert-success mt-3">{{ success }}</div>
+                {% endif %}
+
+                {% if listing['status'] == 1 %}
+                <form method="POST" class="mt-3">
+                    <label class="label">Place Your Bid</label>
+                    <input type="number" name="bid_amount" step="0.01" min="0" class="form-control mb-3" required>
+                    <button type="submit" class="btn-blue">Place Bid</button>
+                </form>
+                {% elif listing['status'] == 3 %}
+                    <p class="text-muted mt-3">Auction ended. Waiting for winner payment.</p>
+                {% elif listing['status'] == 2 %}
+                    <p class="text-muted mt-3">This item has been sold.</p>
+                {% else %}
+                    <p class="text-muted mt-3">This auction is inactive.</p>
+                {% endif %}
+            </div>
+        </div>
         <!-- BIDS -->
 
         <h5 style="color:#1a3a5c; font-weight:700;">
