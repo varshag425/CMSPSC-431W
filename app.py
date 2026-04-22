@@ -494,6 +494,13 @@ def get_bid_count(listing_ID):
     conn.close()
     return bid_count
 
+def parse_reserve_price(reserve_price_text):
+    '''Converts reserve price text like "$145" or "145" to float.'''
+    reserve_price_text = str(reserve_price_text).strip()
+    if reserve_price_text.startswith('$'):
+        reserve_price_text = reserve_price_text[1:]
+    return float(reserve_price_text)
+
 def favorites_setup():
     conn = sqlite3.connect("NittanyAuctionDB")
     cursor = conn.cursor()
@@ -2004,6 +2011,7 @@ def get_descendant_categories(category_name):
         all_categories.extend(get_descendant_categories(child[0]))
 
     return all_categories
+
 @app.route("/product_listings.html", methods=['POST', 'GET'])
 def product_listings():
     category_selected = request.args.get("category_name", "All")
@@ -2259,6 +2267,9 @@ def product_detail(Listing_ID):
                     conn.commit()
                     success = "Your bid was placed successfully."
 
+                    cursor.execute("SELECT * FROM Auction_Listings WHERE listing_ID = ?", (Listing_ID,))
+                    listing = cursor.fetchone()
+
                     cursor.execute("SELECT * FROM Bids WHERE listing_ID = ? ORDER BY bid_price DESC", (Listing_ID,))
                     bids = cursor.fetchall()
 
@@ -2270,7 +2281,8 @@ def product_detail(Listing_ID):
                     if bid_count >= int(listing['max_bids']):
                         highest_bid = bids[0]['bid_price']
                         highest_bidder = bids[0]['bidder_email']
-                        reserve_price = float(listing['reserve_price'][1:])#$ cant be converted to float
+                        #reserve_price = float(listing['reserve_price'][1:])#$ cant be converted to float
+                        reserve_price = parse_reserve_price(listing['reserve_price'])
 
                         if highest_bid >= reserve_price:
                             cursor.execute(
@@ -2282,6 +2294,7 @@ def product_detail(Listing_ID):
                             listing = cursor.fetchone()
 
                             if bidder_email == highest_bidder:
+                                conn.close()
                                 return redirect(url_for('payment_page', Listing_ID=Listing_ID))
                             else:
                                 success = "Auction has ended. The winning bidder will complete payment."
@@ -2420,6 +2433,9 @@ def payment_page(Listing_ID):
 
     cursor.execute("SELECT * FROM Credit_Cards WHERE owner_email = ?", (email,))
     cards = cursor.fetchall()
+    if int(listing['status']) != 3:
+        conn.close()
+        return redirect(url_for('product_detail', Listing_ID=Listing_ID))
 
     error = None
 
@@ -2457,7 +2473,8 @@ def payment_page(Listing_ID):
         winning_bid=winning_bid,
         payment_amount=payment_amount,
         cards=cards,
-        error=error
+        error=error,
+        email=email
     )
 @app.route('/seller_rating/<int:Listing_ID>.html', methods=['GET','POST'])
 def seller_rating(Listing_ID):
