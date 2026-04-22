@@ -1022,6 +1022,41 @@ def seller_listings():
     cursor.execute("SELECT * FROM Auction_Listings WHERE seller_email = ? ORDER BY listing_ID DESC", (email,))
     all_listings = cursor.fetchall()
 
+    for listing in all_listings:
+        bid_count = get_bid_count(listing['listing_ID'])
+
+        if int(listing['status']) == 1 and bid_count >= int(listing['max_bids']):
+            cursor.execute(
+                "SELECT bid_price FROM Bids WHERE listing_ID = ? ORDER BY bid_price DESC LIMIT 1",
+                (listing['listing_ID'],)
+            )
+            highest_bid_row = cursor.fetchone()
+
+            if highest_bid_row is not None:
+                highest_bid = float(highest_bid_row[0])
+
+                reserve_price_text = str(listing['reserve_price']).strip()
+                if reserve_price_text.startswith('$'):
+                    reserve_price = float(reserve_price_text[1:])
+                else:
+                    reserve_price = float(reserve_price_text)
+
+                if highest_bid >= reserve_price:
+                    cursor.execute(
+                        "UPDATE Auction_Listings SET status = 3 WHERE listing_ID = ?",
+                        (listing['listing_ID'],)
+                    )
+                else:
+                    cursor.execute(
+                        "UPDATE Auction_Listings SET status = 0 WHERE listing_ID = ?",
+                        (listing['listing_ID'],)
+                    )
+
+    conn.commit()
+
+    cursor.execute("SELECT * FROM Auction_Listings WHERE seller_email = ? ORDER BY listing_ID DESC", (email,))
+    all_listings = cursor.fetchall()
+
     active_listings = []
     inactive_listings = []
     sold_listings = []
@@ -1034,7 +1069,7 @@ def seller_listings():
             active_listings.append(listing_dict)
         elif listing['status'] == 0:
             inactive_listings.append(listing_dict)
-        elif listing['status'] == 2:
+        elif listing['status'] == 2 or listing['status'] == 3:
             sold_listings.append(listing_dict)
 
     conn.close()
