@@ -1,59 +1,104 @@
-# CMPSC 431W - NittanyAuction Progress Check
+# CMPSC 431W – NittanyAuction Final Project (Phase 2)
 
-This is a partial implementation of the NittanyAuction system developed for the progress check. At this stage, we have created a simple Flask-based login prototype for the NittanyAuction system. It loads user data from CSV files into a SQLite database and allows a user to log in as a bidder, seller, or helpdesk staff member.
+This project is a full implementation of the **NittanyAuction** system developed for CMPSC 431W. The application is a Flask-based online auction platform that allows users to register, log in, create listings, place bids, complete payments, manage accounts, and access helpdesk support.
 
-## What it does
+## What the System Does
 
-- creates the SQLite database `NittanyAuctionDB`
-- creates and populates these tables from CSV files:
-  - `Users`
-  - `Bidders`
-  - `Sellers`
-  - `Local_Vendors`
-  - `Helpdesk`
-- hashes user passwords using SHA-256 before storing them
-- provides a login page where the user enters:
-  - email
-  - password
-  - role button clicked
-- checks whether the login is valid
-- redirects to:
-  - bidder page
-  - seller page
-  - helpdesk page
-- shows an error message if the login fails
+### User Management
+- Allows new users to register accounts
+- Supports multiple roles:
+  - Bidder
+  - Seller
+  - Local Vendor
+  - Helpdesk Staff
+- Stores user credentials securely with hashed passwords
+- Provides login/logout functionality
 
-## Files / folders
+### Auction Features
+- Sellers can create auction listings
+- Sellers can edit or delete their listings
+- Listings include product details, category, reserve price, bid limits, and optional image links
+- Users can browse available listings
+- Users can view detailed product pages
 
-- `app.py` – main Flask application
-- `templates/` – HTML pages
-	- `index.html`
-	- `login.html`
-	- `bidder.html`
-	- `seller.html`
-	- `helpdesk.html`
-- `data/` – CSV files used to populate the database
-	- `Address.csv`
-	- `Auction_Listings.csv`
-	- `Bidders.csv`
-	- `Bids.csv`
-	- `Categories.csv`
-	- `Credit_Cards.csv`
-	- `Helpdesk.csv`
-	- `Local_Vendors.csv`
-	- `Ratings.csv`
-	- `Requests.csv`
-	- `Sellers.csv`
-	- `Transactions.csv`
-	- `Users.csv`
-	- `Zipcode_Info.csv`
+### Bidding System
+- Bidders can place bids on active listings
+- Tracks highest bid
+- Enforces bid limits and reserve prices
+- Automatically determines auction winners when bidding ends
+- Sends winning users to payment flow
 
-## How to run
+### Payment System
+- Winning bidders can complete payment
+- Transactions are recorded
+- Sold listings are removed from active auctions
 
-1. Install the required packages on your command line tool if needed:
-   pip install flask pandas
-2. Make sure the following files/folders are in the same directory:
-	- app.py
-	- data/
-	- templates/
-3. run: python app.py
+### Ratings & Reviews
+- Buyers can rate sellers after completed purchases
+- Seller ratings are displayed on listing pages
+
+### Helpdesk Features
+- Users can submit support requests
+- Helpdesk staff can view and manage requests
+
+## Database Features
+
+The system uses **SQLite** (`NittanyAuctionDB`) and includes tables such as:
+
+- Users
+- Bidders
+- Sellers
+- Local_Vendors
+- Helpdesk
+- Auction_Listings
+- Bids
+- Transactions
+- Ratings
+- Requests
+- Categories
+- Credit_Cards
+- Address
+- Zipcode_Info
+
+## Technologies Used
+
+- Python
+- Flask
+- SQLite
+- HTML
+- Bootstrap
+- Jinja2 Templates
+- Pandas
+
+## Project Files / Folders
+
+- `app.py` – Main Flask application
+- `templates/` – HTML pages for all user interfaces
+- `data/` – CSV files used for database setup
+- `static/` – Optional images / CSS / assets
+- `README.md` – Project documentation
+
+## How to Run
+
+1. Install required packages:
+
+```bash
+pip install flask pandas
+```
+
+2. Make sure the project folder contains:
+- `app.py`
+- `templates/`
+- `data/`
+
+3. Run the application:
+```bash
+python app.py
+```
+
+4. Open the local server URL shown in the terminal (usually `http://127.0.0.1:5000`).
+
+## Notes
+SQLite database file will be created automatically if it does not already exist.
+CSV files are used to initialize database tables.
+Some features depend on having sample data loaded.
