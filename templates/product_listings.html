@@ -112,7 +112,7 @@
         Category: <strong>{{ category_selected }}</strong>
         {% if search_query %}
             — Results for: <strong>"{{ search_query }}"</strong>
-            <a href="/product_listings.html?category_name={{ category_selected }}"
+            <a href="{{ url_for('product_listings', category_name=category_selected) }}">
                style="font-size:.8rem; color:#1a6fc4; margin-left:.5rem;">✕ Clear search</a>
         {% endif %}
     </div>
@@ -120,7 +120,7 @@
     <!-- CATEGORIES -->
     <div class="page-title">Browse Categories</div>
     <div class="category-box mb-4">
-        <a href="/product_listings.html?category_name=All"><b>All</b></a>
+        <a href="{{ url_for('product_listings', category_name='All') }}"><b>All</b></a>
 
         {% macro getCategories(categories, parent_id='root') %}
         <div class="list-group list-group-flush">
@@ -128,13 +128,13 @@
         {% set cat_id = parent_id ~ '-' ~ loop.index %}
         <div class="list-group-item">
             {% if category.children %}
-            <a href="/product_listings.html?category_name={{ category.category_name }}">{{ category.category_name }}</a>
+            <a href="{{ url_for('product_listings', category_name=category.category_name) }}">{{ category.category_name }}</a>
             <button type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ cat_id }}">See More</button>
             <div id="collapse-{{ cat_id }}" class="collapse">
                 {{ getCategories(category.children, cat_id) }}
             </div>
             {% else %}
-            <a href="/product_listings.html?category_name={{ category.category_name }}">{{ category.category_name }}</a>
+            <a href="{{ url_for('product_listings', category_name=category.category_name) }}">{{ category.category_name }}</a>
             {% endif %}
         </div>
         {% endfor %}

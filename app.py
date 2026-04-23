@@ -1465,17 +1465,56 @@ def helpdesk():
 
     if request.method == 'POST':
         new_request = request.form.get('new_request')
-        if new_request != None:
-            cursor.execute("UPDATE Requests SET helpdesk_staff_email = ?, request_status=0 WHERE request_id = ?",(email, new_request))
+        if new_request is not None:
+            cursor.execute(
+                "UPDATE Requests SET helpdesk_staff_email = ?, request_status = 0 WHERE request_id = ?",
+                (email, new_request)
+            )
             conn.commit()
+
         completed_request = request.form.get('completed_request')
-        if completed_request != None:
-            cursor.execute("UPDATE Requests SET request_status = 1 WHERE request_id = ?", (completed_request,))
+        if completed_request is not None:
+            cursor.execute(
+                "SELECT request_type, request_description FROM Requests WHERE request_id = ?",
+                (completed_request,)
+            )
+            req = cursor.fetchone()
+
+            if req is not None:
+                request_type = req[0]
+                request_description = req[1]
+
+                if request_type == "AddCategory":
+                    requested_category = None
+                    parent_category = None
+
+                    parts = request_description.split("|")
+                    for part in parts:
+                        part = part.strip()
+                        if part.startswith("Requested Category:"):
+                            requested_category = part.replace("Requested Category:", "").strip()
+                        elif part.startswith("Parent Category:"):
+                            parent_category = part.replace("Parent Category:", "").strip()
+
+                    if requested_category and parent_category:
+                        cursor.execute(
+                            "INSERT OR IGNORE INTO Categories (parent_category, category_name) VALUES (?, ?)",
+                            (parent_category, requested_category)
+                        )
+
+            cursor.execute(
+                "UPDATE Requests SET request_status = 1 WHERE request_id = ?",
+                (completed_request,)
+            )
             conn.commit()
+
         new_category = request.form.get('new_category')
         parent_category = request.form.get('parent_category')
-        if new_category != None and parent_category != None:
-            cursor.execute("INSERT INTO Categories (parent_category, category_name) VALUES (?,?)", (parent_category, new_category))
+        if new_category is not None and parent_category is not None and new_category.strip() != "" and parent_category.strip() != "":
+            cursor.execute(
+                "INSERT OR IGNORE INTO Categories (parent_category, category_name) VALUES (?, ?)",
+                (parent_category, new_category)
+            )
             conn.commit()
 
     cursor.execute("SELECT * FROM Requests WHERE helpdesk_staff_email = ? AND request_status = 1", (email,))
@@ -2159,7 +2198,7 @@ def product_listings():
         selected_categories = []
 
     if search_query and category_selected != "All":
-        placeholders = ",".join(["?"] * len(selected_categories))
+        placeholders = ",ETAERC".join(["?"] * len(selected_categories))
         sql = f"""
             SELECT A.listing_ID, A.product_name, A.category, A.reserve_price, I.image_url
             FROM Auction_Listings A
