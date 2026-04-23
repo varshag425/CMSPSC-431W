@@ -2415,7 +2415,7 @@ def product_detail(Listing_ID):
                     if bid_count >= int(listing['max_bids']):
                         highest_bid = bids[0]['bid_price']
                         highest_bidder = bids[0]['bidder_email']
-                        reserve_price = float(listing['reserve_price'][1:])
+                        reserve_price = parse_reserve_price(listing['reserve_price'])
 
                         if highest_bid >= reserve_price:
                             auction_title = listing['auction_title']
