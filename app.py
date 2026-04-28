@@ -2465,11 +2465,11 @@ def product_detail(Listing_ID):
                             )
 
                             cursor.execute("""
-                                INSERT INTO Notifications (user_email, listing_id, message)
-                                VALUES (?, ?, ?)
-                            """, (highest_bidder, Listing_ID,
-                                  f"Congratulations! You won the auction for '{auction_title}' "
-                                  f"with a bid of ${highest_bid:.2f}."))
+                                           INSERT INTO Notifications (user_email, listing_ID, message, created_at)
+                                           VALUES (?, ?, ?, datetime('now'))
+                                           """, (highest_bidder, Listing_ID,
+                                                 f"Congratulations! You won the auction for '{auction_title}' "
+                                                 f"with a bid of ${highest_bid:.2f}. Please complete payment."))
 
                             cursor.execute("""
                                 SELECT DISTINCT bidder_email FROM Bids
@@ -2477,11 +2477,11 @@ def product_detail(Listing_ID):
                             """, (Listing_ID, highest_bidder))
                             for loser in cursor.fetchall():
                                 cursor.execute("""
-                                    INSERT INTO Notifications (user_email, listing_id, message)
-                                    VALUES (?, ?, ?)
-                                """, (loser['bidder_email'], Listing_ID,
-                                      f"The auction for '{auction_title}' has ended. "
-                                      f"Unfortunately, you did not win."))
+                                               INSERT INTO Notifications (user_email, listing_ID, message, created_at)
+                                               VALUES (?, ?, ?, datetime('now'))
+                                               """, (loser['bidder_email'], Listing_ID,
+                                                     f"The auction for '{auction_title}' has ended. "
+                                                     f"Unfortunately, you did not win."))
 
                             conn.commit()
                             cursor.execute("SELECT * FROM Auction_Listings WHERE listing_ID = ?", (Listing_ID,))
@@ -2505,11 +2505,11 @@ def product_detail(Listing_ID):
 
                             for bidder in cursor.fetchall():
                                 cursor.execute("""
-                                    INSERT INTO Notifications (user_email, listing_id, message)
-                                    VALUES (?, ?, ?)
-                                """, (bidder['bidder_email'], Listing_ID,
-                                      f"The auction for '{auction_title}' has closed. "
-                                      f"The reserve price was not met, so no sale occurred."))
+                                               INSERT INTO Notifications (user_email, listing_ID, message, created_at)
+                                               VALUES (?, ?, ?, datetime('now'))
+                                               """, (bidder['bidder_email'], Listing_ID,
+                                                     f"The auction for '{auction_title}' has closed. "
+                                                     f"The reserve price was not met, so no sale occurred."))
                             conn.commit()
 
     product_images = {
@@ -2723,6 +2723,20 @@ def payment_page(Listing_ID):
                 (Listing_ID,)
             )
 
+            cursor.execute(
+                "UPDATE Sellers SET balance = balance + ? WHERE email = ?",
+                (payment_amount, listing['seller_email'])
+            )
+            cursor.execute("""
+                           INSERT INTO Notifications (user_email, listing_ID, message, created_at)
+                           VALUES (?, ?, ?, datetime('now'))
+                           """, (
+                               listing['seller_email'],
+                               Listing_ID,
+                               f"Payment completed for '{listing['auction_title']}'. "
+                               f"${payment_amount:.2f} has been added to your seller balance."
+                           ))
+
             conn.commit()
             conn.close()
             return redirect(url_for('seller_rating', Listing_ID=Listing_ID))
@@ -2762,6 +2776,20 @@ def payment_page(Listing_ID):
                 "UPDATE Auction_Listings SET status = 2 WHERE listing_ID = ?",
                 (Listing_ID,)
             )
+
+            cursor.execute(
+                "UPDATE Sellers SET balance = balance + ? WHERE email = ?",
+                (payment_amount, listing['seller_email'])
+            )
+            cursor.execute("""
+                           INSERT INTO Notifications (user_email, listing_ID, message, created_at)
+                           VALUES (?, ?, ?, datetime('now'))
+                           """, (
+                               listing['seller_email'],
+                               Listing_ID,
+                               f"Payment completed for '{listing['auction_title']}'. "
+                               f"${payment_amount:.2f} has been added to your seller balance."
+                           ))
 
             conn.commit()
             conn.close()

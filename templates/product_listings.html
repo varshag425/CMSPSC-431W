@@ -17,8 +17,22 @@
         }
         .top-nav .brand { color: #fff; font-size: 1.4rem; font-weight: 700; text-decoration: none; }
         .top-nav .brand span { color: #cce4ff; }
-        .top-nav a.nav-link-right { color: #cce4ff; font-size: .85rem; text-decoration: none; }
-        .top-nav a.nav-link-right:hover { color: #fff; }
+        .nav-links {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .nav-links a {
+            color: #cce4ff;
+            font-size: .9rem;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .nav-links a:hover {
+            color: #ffffff;
+        }
 
         .page-title { font-size: 1.4rem; font-weight: 700; color: #1a3a5c; margin-bottom: .25rem; }
         .category-label { font-size: .85rem; color: #5a8ab5; margin-bottom: 1rem; }
@@ -99,9 +113,11 @@
         </button>
     </form>
 
-    <div class="d-flex gap-3 align-items-center">
-        <a href="/favorites.html" class="nav-link-right">♡ Favorites</a>
-        <a href="{{ url_for('my_account') }}" style="color:#cce4ff; text-decoration:none;">My Account</a>
+    <div class="nav-links">
+        <a href="/favorites.html">Favorites</a>
+        <a href="/notifications.html">Notifications</a>
+        <a href="{{ url_for('my_account') }}">My Account</a>
+        <a href="/">Sign Out</a>
     </div>
 </div>
 
@@ -112,8 +128,10 @@
         Category: <strong>{{ category_selected }}</strong>
         {% if search_query %}
             — Results for: <strong>"{{ search_query }}"</strong>
-            <a href="{{ url_for('product_listings', category_name=category_selected) }}">
-               style="font-size:.8rem; color:#1a6fc4; margin-left:.5rem;">✕ Clear search</a>
+            <a href="{{ url_for('product_listings', category_name=category_selected) }}"
+               style="font-size:.8rem; color:#1a6fc4; margin-left:.5rem;">
+               ✕ Clear search
+            </a>
         {% endif %}
     </div>
 
@@ -153,8 +171,8 @@
         <div class="col">
             <div class="product-card">
                 <a href="/listing/{{ product['listing_ID'] }}">
-                    {% if product['product_name'] in product_images %}
-                    <img src="{{ product_images[product['product_name']] }}"
+                    {% if product['final_image_url'] %}
+                    <img src="{{ product['final_image_url'] }}"
                          alt="{{ product['product_name'] }}" class="product-img">
                     {% else %}
                     <div class="product-img-placeholder">No Image</div>

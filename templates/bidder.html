@@ -21,6 +21,23 @@
         .top-nav a.signout { color: #cce4ff; font-size: .85rem; text-decoration: none; }
         .top-nav a.signout:hover { color: #fff; }
 
+        .nav-links {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .nav-links a {
+            color: #cce4ff;
+            font-size: .9rem;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .nav-links a:hover {
+            color: #ffffff;
+        }
+
         .welcome-bar {
             background: #2980d9;
             color: #fff;
@@ -83,7 +100,12 @@
 <!-- NAV -->
 <div class="top-nav">
     <a class="brand" href="/">Nittany<span>Auction</span></a>
-    <a href="/" class="signout">Sign Out</a>
+    <div class="nav-links">
+        <a href="/favorites.html">Favorites</a>
+        <a href="/notifications.html">Notifications</a>
+        <a href="{{ url_for('my_account') }}">My Account</a>
+        <a href="/">Sign Out</a>
+    </div>
 </div>
 
 <!-- WELCOME BAR -->
